@@ -47,9 +47,29 @@ class TracerStudyViewModel(
         _state.value = current.copy(tracerStudy = current.tracerStudy.update(), error = null)
     }
 
-    fun updateStatusKerja(status: String) {
+    fun updateAnswer(field: String, value: String?) {
         val current = _state.value ?: WizardState()
-        _state.value = current.copy(tracerStudy = current.tracerStudy.copy(statusKerja = status), error = null)
+        val answers = current.tracerStudy.answers.toMutableMap()
+        val normalized = value?.trim()?.takeIf { it.isNotEmpty() }
+        if (normalized == null) {
+            answers.remove(field)
+        } else {
+            answers[field] = normalized
+        }
+        val tracer = current.tracerStudy
+            .copy(questionnaireVersion = TracerStudyQuestionnaire.VERSION, answers = answers)
+            .withLegacyFields()
+        _state.value = current.copy(tracerStudy = tracer, error = null)
+    }
+
+    fun updateStatusKerja(status: String) {
+        val value = when (status) {
+            "Bekerja" -> "1"
+            "Wirausaha" -> "3"
+            "Melanjutkan Studi" -> "4"
+            else -> "5"
+        }
+        updateAnswer("f8", value)
     }
 
     fun updateConfirmation(confirmed: Boolean) {
@@ -64,19 +84,13 @@ class TracerStudyViewModel(
             return
         }
         autoSave(current.tracerStudy)
-        val next = when {
-            current.currentStep == 3 && current.tracerStudy.statusKerja != "Bekerja" -> 5
-            else -> (current.currentStep + 1).coerceAtMost(6)
-        }
+        val next = (current.currentStep + 1).coerceAtMost(TracerStudyQuestionnaire.sections.size)
         _state.value = current.copy(currentStep = next, error = null)
     }
 
     fun previous() {
         val current = _state.value ?: WizardState()
-        val previous = when {
-            current.currentStep == 5 && current.tracerStudy.statusKerja != "Bekerja" -> 3
-            else -> (current.currentStep - 1).coerceAtLeast(1)
-        }
+        val previous = (current.currentStep - 1).coerceAtLeast(1)
         _state.value = current.copy(currentStep = previous)
     }
 
@@ -104,45 +118,18 @@ class TracerStudyViewModel(
     }
 
     private fun validateStep(state: WizardState): String? {
-        val tracer = state.tracerStudy
-        return when (state.currentStep) {
-            4 -> validateWorkData(tracer)
-            5 -> validateCompetencies(tracer)
-            else -> null
-        }
+        val section = TracerStudyQuestionnaire.sectionForStep(state.currentStep)
+        return TracerStudyQuestionnaire.missingRequiredQuestion(section, state.tracerStudy.answers)
+            ?.let { "$it wajib diisi" }
     }
 
     private fun validateSubmit(tracer: TracerStudy): String? {
         if (tracer.alumniId.isBlank()) return "Sesi login tidak ditemukan"
-        return validateWorkData(tracer) ?: validateCompetencies(tracer)
-    }
-
-    private fun validateWorkData(tracer: TracerStudy): String? {
-        if (tracer.statusKerja != "Bekerja") return null
-        return when {
-            tracer.namaPerusahaan.isNullOrBlank() -> "Nama perusahaan wajib diisi"
-            tracer.bidangPekerjaan.isNullOrBlank() -> "Bidang pekerjaan wajib diisi"
-            tracer.jabatan.isNullOrBlank() -> "Jabatan wajib diisi"
-            tracer.rentangGaji.isNullOrBlank() -> "Rentang gaji wajib dipilih"
-            tracer.provinsiKerja.isNullOrBlank() -> "Provinsi bekerja wajib diisi"
-            tracer.kesesuaianBidang == null -> "Kesesuaian bidang wajib dinilai"
-            else -> null
+        TracerStudyQuestionnaire.sections.forEach { section ->
+            TracerStudyQuestionnaire.missingRequiredQuestion(section, tracer.answers)
+                ?.let { return "$it wajib diisi" }
         }
-    }
-
-    private fun validateCompetencies(tracer: TracerStudy): String? {
-        val allScores = listOf(
-            tracer.nilaiHardSkill,
-            tracer.nilaiSoftSkill,
-            tracer.nilaiBahasaAsing,
-            tracer.nilaiIt,
-            tracer.nilaiKepemimpinan
-        )
-        return if (allScores.any { it == null }) {
-            "Semua penilaian kompetensi wajib diisi"
-        } else {
-            null
-        }
+        return null
     }
 
     private fun autoSave(tracerStudy: TracerStudy) {
@@ -168,7 +155,7 @@ class TracerStudyViewModel(
                 draft != null && current.tracerStudy == defaultTracer -> draft
                 current.tracerStudy.alumniId.isBlank() -> current.tracerStudy.copy(alumniId = alumniId)
                 else -> current.tracerStudy
-            }
+            }.withSeededAnswers().withLegacyFields()
             _state.value = current.copy(
                 alumni = (profileResult as? NetworkResult.Success)?.data ?: current.alumni,
                 tracerStudy = tracerStudy,
@@ -177,5 +164,48 @@ class TracerStudyViewModel(
                     ?: (draftResult as? NetworkResult.Error)?.message
             )
         }
+    }
+
+    private fun TracerStudy.withSeededAnswers(): TracerStudy {
+        if (answers.isNotEmpty()) return this
+        val seeded = mutableMapOf<String, String>()
+        seeded["f8"] = when (statusKerja) {
+            "Bekerja" -> "1"
+            "Wirausaha" -> "3"
+            "Melanjutkan Studi" -> "4"
+            else -> "5"
+        }
+        namaPerusahaan?.takeIf { it.isNotBlank() }?.let { seeded["f5b"] = it }
+        jabatan?.takeIf { it.isNotBlank() }?.let { seeded["f5c"] = it }
+        provinsiKerja?.takeIf { it.isNotBlank() }?.let { seeded["f5a1"] = it }
+        kesesuaianBidang?.let { seeded["f14"] = it.toString() }
+        nilaiHardSkill?.let { seeded["f1763"] = it.toString() }
+        nilaiBahasaAsing?.let { seeded["f1765"] = it.toString() }
+        nilaiIt?.let { seeded["f1767"] = it.toString() }
+        nilaiSoftSkill?.let { seeded["f1769"] = it.toString() }
+        nilaiKepemimpinan?.let { seeded["f1771"] = it.toString() }
+        return copy(questionnaireVersion = TracerStudyQuestionnaire.VERSION, answers = seeded)
+    }
+
+    private fun TracerStudy.withLegacyFields(): TracerStudy {
+        val mappedStatus = when (answers["f8"]) {
+            "1" -> "Bekerja"
+            "3" -> "Wirausaha"
+            "4" -> "Melanjutkan Studi"
+            else -> "Belum Bekerja"
+        }
+        return copy(
+            questionnaireVersion = TracerStudyQuestionnaire.VERSION,
+            statusKerja = mappedStatus,
+            namaPerusahaan = answers["f5b"],
+            jabatan = answers["f5c"],
+            provinsiKerja = answers["f5a1"],
+            kesesuaianBidang = answers["f14"]?.toIntOrNull(),
+            nilaiHardSkill = answers["f1763"]?.toIntOrNull(),
+            nilaiBahasaAsing = answers["f1765"]?.toIntOrNull(),
+            nilaiIt = answers["f1767"]?.toIntOrNull(),
+            nilaiSoftSkill = answers["f1769"]?.toIntOrNull(),
+            nilaiKepemimpinan = answers["f1771"]?.toIntOrNull()
+        )
     }
 }

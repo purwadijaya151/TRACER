@@ -43,6 +43,8 @@ export interface Alumni {
 export interface TracerStudy {
   id: string;
   alumni_id: string;
+  questionnaire_version?: string | null;
+  answers?: Record<string, string | number | boolean | null> | null;
   status_kerja: StatusKerja;
   nama_perusahaan?: string | null;
   bidang_pekerjaan?: string | null;

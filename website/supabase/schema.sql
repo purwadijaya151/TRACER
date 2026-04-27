@@ -111,6 +111,8 @@ comment on column public.alumni.npp is 'NPP staff/admin kampus. Mahasiswa/alumni
 create table if not exists public.tracer_study (
   id uuid primary key default uuid_generate_v4(),
   alumni_id uuid references public.alumni(id) on delete cascade,
+  questionnaire_version varchar(40) not null default 'legacy-v1',
+  answers jsonb not null default '{}'::jsonb,
   status_kerja public.status_kerja_type not null,
   nama_perusahaan varchar(150),
   bidang_pekerjaan varchar(100),
@@ -132,6 +134,17 @@ create table if not exists public.tracer_study (
   updated_at timestamptz default now(),
   unique(alumni_id)
 );
+
+alter table public.tracer_study add column if not exists questionnaire_version varchar(40) not null default 'legacy-v1';
+alter table public.tracer_study add column if not exists answers jsonb not null default '{}'::jsonb;
+
+do $$
+begin
+  alter table public.tracer_study
+    add constraint tracer_study_answers_object
+    check (jsonb_typeof(answers) = 'object');
+exception when duplicate_object then null;
+end $$;
 
 create table if not exists public.notifications (
   id uuid primary key default uuid_generate_v4(),
@@ -206,6 +219,7 @@ create index if not exists alumni_prodi_tahun_lulus_idx on public.alumni(prodi, 
 create unique index if not exists alumni_npp_unique_idx on public.alumni(npp) where npp is not null;
 create index if not exists alumni_admin_npp_idx on public.alumni(npp) where is_admin = true;
 create index if not exists tracer_study_status_idx on public.tracer_study(status_kerja, is_submitted);
+create index if not exists tracer_study_answers_gin_idx on public.tracer_study using gin (answers);
 create index if not exists notifications_alumni_read_idx on public.notifications(alumni_id, is_read, created_at desc);
 create index if not exists notifications_broadcast_idx on public.notifications(broadcast_id, is_read);
 create index if not exists notification_broadcasts_created_idx on public.notification_broadcasts(created_at desc);

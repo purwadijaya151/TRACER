@@ -7,6 +7,8 @@ import kotlinx.serialization.Serializable
 data class TracerStudy(
     val id: String? = null,
     @SerialName("alumni_id") val alumniId: String = "",
+    @SerialName("questionnaire_version") val questionnaireVersion: String = "launch-v1",
+    val answers: Map<String, String> = emptyMap(),
     @SerialName("status_kerja") val statusKerja: String = "Belum Bekerja",
     @SerialName("nama_perusahaan") val namaPerusahaan: String? = null,
     @SerialName("bidang_pekerjaan") val bidangPekerjaan: String? = null,
@@ -31,6 +33,8 @@ data class TracerStudy(
 @Serializable
 data class TracerStudyUpsert(
     @SerialName("alumni_id") val alumniId: String,
+    @SerialName("questionnaire_version") val questionnaireVersion: String = "launch-v1",
+    val answers: Map<String, String> = emptyMap(),
     @SerialName("status_kerja") val statusKerja: String,
     @SerialName("nama_perusahaan") val namaPerusahaan: String? = null,
     @SerialName("bidang_pekerjaan") val bidangPekerjaan: String? = null,
@@ -52,6 +56,8 @@ data class TracerStudyUpsert(
 
 fun TracerStudy.toUpsert(): TracerStudyUpsert = TracerStudyUpsert(
     alumniId = alumniId,
+    questionnaireVersion = questionnaireVersion,
+    answers = answers,
     statusKerja = statusKerja,
     namaPerusahaan = namaPerusahaan,
     bidangPekerjaan = bidangPekerjaan,

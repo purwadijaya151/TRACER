@@ -1,6 +1,56 @@
 import * as XLSX from "xlsx-js-style";
 import { getTracerRecord, responseStatus } from "@/lib/utils";
+import {
+  answerValue,
+  optionLabel,
+  questionnaireSections,
+  shouldShowQuestion,
+  type AnswerMap
+} from "@/lib/questionnaire/tracer-study-launch";
 import type { Alumni, ReportData, TracerStudy } from "@/types";
+
+function mapQuestionnaireAnswers(row: TracerStudy) {
+  const answers = (row.answers ?? {}) as AnswerMap;
+  if (!row.answers) return {};
+
+  return questionnaireSections.reduce<Record<string, string>>((acc, section) => {
+    section.questions.forEach((question) => {
+      if (!shouldShowQuestion(question, answers)) return;
+
+      if (question.type === "matrix_pair") {
+        question.rows.forEach((matrixRow) => {
+          acc[`${matrixRow.label} - Dikuasai`] = optionLabel(question.scale, answerValue(answers, matrixRow.leftField)) || "-";
+          acc[`${matrixRow.label} - Diperlukan`] = optionLabel(question.scale, answerValue(answers, matrixRow.rightField)) || "-";
+        });
+        return;
+      }
+
+      if (question.type === "multi_choice") {
+        const selected = question.options
+          .filter((option) => answerValue(answers, option.field) === option.value)
+          .map((option) => option.label);
+        const other = question.otherField ? answerValue(answers, question.otherField) : null;
+        acc[question.label] = [...selected, other].filter(Boolean).join(", ") || "-";
+        return;
+      }
+
+      if (question.type === "single_choice") {
+        const other = question.otherField ? answerValue(answers, question.otherField) : null;
+        acc[question.label] = [optionLabel(question.options, answerValue(answers, question.id)), other].filter(Boolean).join(" - ") || "-";
+        return;
+      }
+
+      if (question.type === "scale") {
+        acc[question.label] = optionLabel(question.scale, answerValue(answers, question.id)) || "-";
+        return;
+      }
+
+      const value = answerValue(answers, question.id);
+      acc[question.label] = value ? `${value}${question.suffix ? ` ${question.suffix}` : ""}` : "-";
+    });
+    return acc;
+  }, {});
+}
 
 export function mapTracerRowsForExcel(rows: TracerStudy[]) {
   return rows.map((row, index) => ({
@@ -21,7 +71,8 @@ export function mapTracerRowsForExcel(rows: TracerStudy[]) {
     "Soft Skill": row.nilai_soft_skill ?? "-",
     "Bahasa Asing": row.nilai_bahasa_asing ?? "-",
     IT: row.nilai_it ?? "-",
-    Kepemimpinan: row.nilai_kepemimpinan ?? "-"
+    Kepemimpinan: row.nilai_kepemimpinan ?? "-",
+    ...mapQuestionnaireAnswers(row)
   }));
 }
 

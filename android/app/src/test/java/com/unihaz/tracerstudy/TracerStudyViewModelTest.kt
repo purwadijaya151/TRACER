@@ -21,34 +21,38 @@ class TracerStudyViewModelTest {
     @get:Rule val mainDispatcherRule = MainDispatcherRule()
 
     @Test
-    fun skipsWorkDataStepWhenNotWorking() {
+    fun blocksFirstStepWhenStatusMissing() {
         val viewModel = TracerStudyViewModel()
-        viewModel.updateStatusKerja("Belum Bekerja")
         viewModel.next()
-        viewModel.next()
-        viewModel.next()
-        assertEquals(5, viewModel.state.value?.currentStep)
+        assertEquals(1, viewModel.state.value?.currentStep)
+        assertEquals("Jelaskan status Anda saat ini wajib diisi", viewModel.state.value?.error)
     }
 
     @Test
-    fun blocksWorkDataStepWhenWorkingDataIsMissing() {
+    fun mapsDiktiStatusToLegacyStatus() {
         val viewModel = TracerStudyViewModel()
-        viewModel.updateStatusKerja("Bekerja")
-        viewModel.next()
-        viewModel.next()
-        viewModel.next()
-        viewModel.next()
-        assertEquals(4, viewModel.state.value?.currentStep)
-        assertEquals("Nama perusahaan wajib diisi", viewModel.state.value?.error)
+        viewModel.updateAnswer("f8", "3")
+        assertEquals("Wirausaha", viewModel.state.value?.tracerStudy?.statusKerja)
+        assertEquals("3", viewModel.state.value?.tracerStudy?.answers?.get("f8"))
     }
 
     @Test
-    fun submitRequiresCompetencyRatings() {
+    fun requiresConditionalWorkFieldsWhenWorking() {
+        val viewModel = TracerStudyViewModel()
+        viewModel.updateAnswer("f8", "1")
+        viewModel.next()
+        viewModel.next()
+        assertEquals(2, viewModel.state.value?.currentStep)
+        assertEquals("Dalam berapa bulan Anda mendapatkan pekerjaan pertama atau mulai wirausaha? wajib diisi", viewModel.state.value?.error)
+    }
+
+    @Test
+    fun submitRequiresQuestionnaireAnswers() {
         val viewModel = TracerStudyViewModel()
         viewModel.updateTracer(TracerStudy(alumniId = "user-id", statusKerja = "Belum Bekerja"))
         viewModel.updateConfirmation(true)
         viewModel.submit()
-        assertEquals("Semua penilaian kompetensi wajib diisi", viewModel.state.value?.error)
+        assertEquals("Jelaskan status Anda saat ini wajib diisi", viewModel.state.value?.error)
     }
 }
 
