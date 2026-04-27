@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => {
   const single = vi.fn(async () => ({ data: { id: "user-1", nim: "2026001" }, error: null }));
-  const inFilter = vi.fn(async () => ({ data: [], error: null }));
+  const inFilter = vi.fn(async () => ({ data: [] as Array<{ id: string; is_admin: boolean }>, error: null }));
   const select = vi.fn(() => ({ single, in: inFilter }));
   const upsert = vi.fn(() => ({ select }));
   const from = vi.fn(() => ({ upsert }));

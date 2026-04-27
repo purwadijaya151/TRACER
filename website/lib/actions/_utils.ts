@@ -52,3 +52,15 @@ export function sanitizeText(value?: string | null) {
   if (!value) return undefined;
   return value.trim() || undefined;
 }
+
+export function isMissingRelationError(error?: { code?: string; message?: string } | null) {
+  return (
+    error?.code === "PGRST205" ||
+    error?.message?.includes("Could not find the table") ||
+    error?.message?.includes("Could not find the view")
+  );
+}
+
+export function isMissingFunctionError(error?: { code?: string; message?: string } | null) {
+  return error?.code === "PGRST202" || error?.message?.includes("Could not find the function");
+}

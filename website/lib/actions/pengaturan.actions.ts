@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { actionData, actionError, requireAdmin } from "@/lib/actions/_utils";
+import { actionData, actionError, isMissingRelationError, requireAdmin } from "@/lib/actions/_utils";
 import { passwordSchema, pengaturanSchema, profileSchema } from "@/lib/validation";
 import type { Alumni, PengaturanSistem } from "@/types";
 
@@ -26,7 +26,10 @@ export async function getPengaturan() {
     .eq("id", SETTINGS_ID)
     .maybeSingle();
 
-  if (error) return actionError<PengaturanSistem>();
+  if (error) {
+    if (isMissingRelationError(error)) return actionData(defaultSettings);
+    return actionError<PengaturanSistem>();
+  }
   return actionData((data as PengaturanSistem | null) ?? defaultSettings);
 }
 
@@ -43,7 +46,12 @@ export async function savePengaturan(input: unknown) {
     .select()
     .single();
 
-  if (error) return actionError<PengaturanSistem>("Gagal menyimpan pengaturan");
+  if (error) {
+    if (isMissingRelationError(error)) {
+      return actionError<PengaturanSistem>("Tabel pengaturan sistem belum tersedia. Jalankan migrasi database terlebih dahulu.");
+    }
+    return actionError<PengaturanSistem>("Gagal menyimpan pengaturan");
+  }
   return actionData(data as PengaturanSistem);
 }
 

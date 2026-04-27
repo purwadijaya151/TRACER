@@ -1,8 +1,17 @@
 "use server";
 
-import { actionData, actionError, getRange, requireAdmin } from "@/lib/actions/_utils";
+import {
+  actionData,
+  actionError,
+  getRange,
+  isMissingFunctionError,
+  isMissingRelationError,
+  requireAdmin
+} from "@/lib/actions/_utils";
 import { notificationSchema } from "@/lib/validation";
 import type { NotificationBroadcast, NotificationFilters, PaginatedResult } from "@/types";
+
+type AdminContext = Extract<Awaited<ReturnType<typeof requireAdmin>>, { ok: true }>;
 
 type BroadcastPayload = {
   title: string;
@@ -28,7 +37,10 @@ export async function getRecipientCount(input: unknown) {
     p_tahun_akhir: payload.tahunAkhir ?? null
   });
 
-  if (error) return actionError<number>("Gagal menghitung penerima");
+  if (error) {
+    if (isMissingFunctionError(error)) return countRecipientsFromBaseTables(auth, payload);
+    return actionError<number>("Gagal menghitung penerima");
+  }
   return actionData(Number(data ?? 0));
 }
 
@@ -49,7 +61,17 @@ export async function getNotifications(filters: NotificationFilters = {}, page =
   }
 
   const { data, error, count } = await query;
-  if (error) return actionError<PaginatedResult<NotificationBroadcast>>();
+  if (error) {
+    if (isMissingRelationError(error)) {
+      return actionData({
+        rows: [],
+        total: 0,
+        page,
+        pageSize
+      });
+    }
+    return actionError<PaginatedResult<NotificationBroadcast>>();
+  }
 
   return actionData({
     rows: (data ?? []) as NotificationBroadcast[],
@@ -70,6 +92,9 @@ export async function getNotificationStats() {
   ]);
 
   if (total.error || read.error || unread.error) {
+    if ([total.error, read.error, unread.error].some(isMissingRelationError)) {
+      return actionData({ total: 0, read: 0, unread: 0 });
+    }
     return actionError<{ total: number; read: number; unread: number }>();
   }
 
@@ -109,6 +134,9 @@ export async function broadcastNotifikasi(input: unknown) {
     if (error.message.includes("empty_prodi_target")) {
       return actionError<{ sent: number }>("Pilih minimal satu prodi");
     }
+    if (isMissingFunctionError(error)) {
+      return actionError<{ sent: number }>("Fitur broadcast belum tersedia. Jalankan migrasi database notifikasi terlebih dahulu.");
+    }
     return actionError<{ sent: number }>("Gagal mengirim notifikasi");
   }
 
@@ -123,7 +151,41 @@ export async function deleteNotifikasi(id: string) {
   const { data, error } = await auth.adminClient.rpc("admin_delete_notification_broadcast", {
     p_broadcast_id: id
   });
-  if (error) return actionError<{ deleted: number }>("Gagal menghapus notifikasi");
+  if (error) {
+    if (isMissingFunctionError(error)) return actionError<{ deleted: number }>("Fitur hapus broadcast belum tersedia");
+    return actionError<{ deleted: number }>("Gagal menghapus notifikasi");
+  }
 
   return actionData({ deleted: Number(data ?? 0) });
+}
+
+async function countRecipientsFromBaseTables(auth: AdminContext, payload: BroadcastPayload) {
+  let query = auth.adminClient
+    .from("alumni")
+    .select("id", { count: "exact", head: true })
+    .eq("is_admin", false);
+
+  if (payload.target === "prodi") {
+    if (!payload.prodi?.length) return actionError<number>("Pilih minimal satu prodi");
+    query = query.in("prodi", payload.prodi);
+  }
+
+  if (payload.target === "tahun") {
+    if (payload.tahunMulai) query = query.gte("tahun_lulus", payload.tahunMulai);
+    if (payload.tahunAkhir) query = query.lte("tahun_lulus", payload.tahunAkhir);
+  }
+
+  if (payload.target === "belum_mengisi") {
+    const { data: submitted } = await auth.adminClient
+      .from("tracer_study")
+      .select("alumni_id")
+      .eq("is_submitted", true)
+      .limit(5000);
+    const submittedIds = (submitted ?? []).map((row) => row.alumni_id).filter(Boolean);
+    if (submittedIds.length > 0) query = query.not("id", "in", `(${submittedIds.join(",")})`);
+  }
+
+  const { count, error } = await query;
+  if (error) return actionError<number>("Gagal menghitung penerima");
+  return actionData(count ?? 0);
 }

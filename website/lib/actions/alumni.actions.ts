@@ -1,8 +1,17 @@
 "use server";
 
 import { alumniSchema, alumniUpdateSchema } from "@/lib/validation";
-import { actionData, actionError, getRange, requireAdmin, sanitizeText } from "@/lib/actions/_utils";
+import {
+  actionData,
+  actionError,
+  getRange,
+  isMissingRelationError,
+  requireAdmin,
+  sanitizeText
+} from "@/lib/actions/_utils";
 import type { Alumni, AlumniFilters, PaginatedResult, TracerStudy } from "@/types";
+
+type AdminContext = Extract<Awaited<ReturnType<typeof requireAdmin>>, { ok: true }>;
 
 function normalizeAlumniPayload(payload: Record<string, unknown>) {
   return {
@@ -60,7 +69,10 @@ export async function getAlumni(filters: AlumniFilters = {}, page = 1, pageSize 
   if (filters.status === "belum") query = query.eq("tracer_submitted", false);
 
   const { data, error, count } = await query;
-  if (error) return actionError<PaginatedResult<Alumni>>();
+  if (error) {
+    if (isMissingRelationError(error)) return getAlumniFromBaseTable(auth, filters, page, pageSize);
+    return actionError<PaginatedResult<Alumni>>();
+  }
 
   const rows = ((data ?? []) as Array<Alumni & { tracer_submitted?: boolean }>).map((row) => {
     const { tracer_submitted: tracerSubmitted, ...alumni } = row;
@@ -100,7 +112,10 @@ export async function getAlumniExport(filters: AlumniFilters = {}) {
   if (filters.status === "belum") query = query.eq("tracer_submitted", false);
 
   const { data, error } = await query;
-  if (error) return actionError<Alumni[]>("Gagal mengambil data alumni");
+  if (error) {
+    if (isMissingRelationError(error)) return getAlumniExportFromBaseTable(auth, filters);
+    return actionError<Alumni[]>("Gagal mengambil data alumni");
+  }
 
   const rows = ((data ?? []) as Array<Alumni & { tracer_submitted?: boolean }>).map((row) => {
     const { tracer_submitted: tracerSubmitted, ...alumni } = row;
@@ -111,6 +126,78 @@ export async function getAlumniExport(filters: AlumniFilters = {}) {
   });
 
   return actionData(rows);
+}
+
+async function getAlumniFromBaseTable(
+  auth: AdminContext,
+  filters: AlumniFilters,
+  page: number,
+  pageSize: number
+) {
+  const allRows = await getFilteredAlumniRows(auth, filters);
+  if (!allRows.ok) return actionError<PaginatedResult<Alumni>>(allRows.error);
+
+  const { from, to } = getRange(page, pageSize);
+  return actionData({
+    rows: allRows.rows.slice(from, to + 1),
+    total: allRows.rows.length,
+    page,
+    pageSize
+  });
+}
+
+async function getAlumniExportFromBaseTable(auth: AdminContext, filters: AlumniFilters) {
+  const allRows = await getFilteredAlumniRows(auth, filters);
+  if (!allRows.ok) return actionError<Alumni[]>(allRows.error);
+  return actionData(allRows.rows);
+}
+
+async function getFilteredAlumniRows(auth: AdminContext, filters: AlumniFilters) {
+  let query = auth.adminClient
+    .from("alumni")
+    .select("*")
+    .eq("is_admin", false)
+    .order("created_at", { ascending: false })
+    .limit(5000);
+
+  if (filters.search) {
+    const search = `%${filters.search}%`;
+    query = query.or(`nim.ilike.${search},nama_lengkap.ilike.${search},email.ilike.${search}`);
+  }
+  if (filters.prodi && filters.prodi !== "all") query = query.eq("prodi", filters.prodi);
+  if (filters.tahun_lulus && filters.tahun_lulus !== "all") query = query.eq("tahun_lulus", filters.tahun_lulus);
+
+  const { data, error } = await query;
+  if (error) return { ok: false as const, error: "Gagal mengambil data alumni" };
+
+  const submittedIds = await getSubmittedAlumniIds(auth, (data ?? []).map((row) => row.id as string));
+  const submittedSet = new Set(submittedIds);
+  const rows = ((data ?? []) as Alumni[])
+    .filter((row) => {
+      if (filters.status === "sudah") return submittedSet.has(row.id);
+      if (filters.status === "belum") return !submittedSet.has(row.id);
+      return true;
+    })
+    .map((row) => ({
+      ...row,
+      tracer_study: submittedSet.has(row.id) ? ([{ is_submitted: true } as TracerStudy]) : []
+    }));
+
+  return { ok: true as const, rows };
+}
+
+async function getSubmittedAlumniIds(auth: AdminContext, alumniIds: string[]) {
+  if (alumniIds.length === 0) return [];
+
+  const { data, error } = await auth.adminClient
+    .from("tracer_study")
+    .select("alumni_id")
+    .in("alumni_id", alumniIds)
+    .eq("is_submitted", true)
+    .limit(5000);
+
+  if (error) return [];
+  return (data ?? []).map((row) => row.alumni_id as string).filter(Boolean);
 }
 
 export async function createAlumni(input: unknown) {
