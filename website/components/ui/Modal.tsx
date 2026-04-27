@@ -56,6 +56,7 @@ export function Modal({
               leaveTo="opacity-0 scale-95"
             >
               <DialogPanel
+                data-testid="modal-panel"
                 className={cn(
                   "w-full rounded-lg bg-white shadow-overlay transition-all",
                   sizes[size]

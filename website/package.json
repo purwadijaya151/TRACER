@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "seed:admin": "node scripts/create-admin.mjs",
+    "e2e:admin": "node scripts/e2e-admin-smoke.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -48,6 +49,7 @@
     "eslint": "^8.57.0",
     "eslint-config-next": "15.0.0",
     "jsdom": "^24.1.0",
+    "playwright": "^1.59.1",
     "postcss": "^8.4.0",
     "vitest": "^2.0.0"
   }
