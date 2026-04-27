@@ -41,7 +41,7 @@ export default function LaporanPage() {
     <div className="space-y-6">
       <div>
         <h2 className="font-heading text-2xl font-semibold text-slate-950">Laporan & Export</h2>
-        <p className="mt-1 text-sm text-slate-500">Pilih jenis laporan, filter data, lalu generate PDF atau Excel.</p>
+        <p className="mt-1 text-sm leading-6 text-slate-600">Pilih jenis laporan, filter data, lalu generate PDF atau Excel.</p>
       </div>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {reports.map((report) => (

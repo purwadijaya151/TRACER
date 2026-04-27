@@ -52,7 +52,7 @@ export function LoginForm() {
           <ShieldCheck className="h-7 w-7" />
         </div>
         <h1 className="font-heading text-2xl font-semibold text-navy">TracerStudy FT UNIHAZ</h1>
-        <p className="mt-2 text-sm text-slate-500">Panel admin berbasis web</p>
+        <p className="mt-2 text-sm text-slate-600">Panel admin berbasis web</p>
       </div>
 
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

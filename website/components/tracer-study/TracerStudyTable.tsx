@@ -8,6 +8,7 @@ import {
   type SortingState,
   useReactTable
 } from "@tanstack/react-table";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyTableRow, Table, Td, Th } from "@/components/ui/Table";
@@ -16,6 +17,12 @@ import { formatDate } from "@/lib/utils";
 import type { TracerStudy } from "@/types";
 
 const columnHelper = createColumnHelper<TracerStudy>();
+
+function SortIcon({ direction }: { direction: false | "asc" | "desc" }) {
+  if (direction === "asc") return <ArrowUp className="h-3.5 w-3.5" aria-hidden="true" />;
+  if (direction === "desc") return <ArrowDown className="h-3.5 w-3.5" aria-hidden="true" />;
+  return <ArrowUpDown className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />;
+}
 
 export function TracerStudyTable({
   rows,
@@ -63,11 +70,11 @@ export function TracerStudyTable({
               <Th key={header.id}>
                 <button
                   type="button"
-                  className="flex items-center gap-1"
+                  className="focus-ring flex min-h-7 w-full items-center justify-start gap-1.5 rounded-sm text-left"
                   onClick={header.column.getToggleSortingHandler()}
                 >
                   {flexRender(header.column.columnDef.header, header.getContext())}
-                  {header.column.getIsSorted() === "asc" ? "↑" : header.column.getIsSorted() === "desc" ? "↓" : ""}
+                  <SortIcon direction={header.column.getIsSorted()} />
                 </button>
               </Th>
             ))}

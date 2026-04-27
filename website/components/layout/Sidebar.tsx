@@ -52,7 +52,7 @@ export function Sidebar({
         </div>
         <div className="min-w-0">
           <p className="font-heading text-lg font-bold leading-tight">TracerStudy</p>
-          <p className="text-xs font-semibold uppercase tracking-wider text-white/70">FT UNIHAZ</p>
+          <p className="text-[13px] font-semibold uppercase tracking-wider text-white/80">FT UNIHAZ</p>
         </div>
       </div>
 
@@ -70,7 +70,7 @@ export function Sidebar({
                 "flex items-center gap-3 rounded-lg border-l-4 px-4 py-3 text-sm font-semibold transition",
                 active
                   ? "border-gold bg-white/10 text-gold"
-                  : "border-transparent text-slate-300 hover:bg-white/5 hover:text-white"
+                  : "border-transparent text-white/80 hover:bg-white/5 hover:text-white"
               )}
             >
               <Icon className="h-5 w-5" />
@@ -85,10 +85,10 @@ export function Sidebar({
           <Avatar name={adminName} src={adminPhoto} size={36} className="bg-white/15 text-white" />
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">{adminName ?? "Admin FT UNIHAZ"}</p>
-            <p className="text-xs text-white/60">Administrator</p>
+            <p className="text-[13px] text-white/80">Administrator</p>
           </div>
         </div>
-        <Button variant="ghost" className="w-full justify-start text-slate-200 hover:bg-white/10 hover:text-white" onClick={logout}>
+        <Button variant="ghost" className="w-full justify-start text-white/85 hover:bg-white/10 hover:text-white" onClick={logout}>
           <LogOut className="h-4 w-4" />
           Keluar
         </Button>

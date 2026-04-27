@@ -88,7 +88,7 @@ export function GenerateLaporanModal({
     >
       <div className="space-y-5">
         <div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-600">Format</p>
+          <p className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-slate-700">Format</p>
           <div className="grid grid-cols-2 rounded-lg border border-slate-200 p-1">
             {(["pdf", "excel"] as const).map((item) => (
               <button
@@ -114,7 +114,7 @@ export function GenerateLaporanModal({
             {STATUS_KERJA_OPTIONS.map((status) => <option key={status}>{status}</option>)}
           </Select>
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-600">Prodi</p>
+            <p className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-slate-700">Prodi</p>
             <div className="space-y-2 rounded-lg border border-slate-100 p-3">
               {PRODI_OPTIONS.map((item) => (
                 <label key={item} className="flex items-center gap-2 text-sm">

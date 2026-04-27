@@ -20,7 +20,7 @@ export function EmptyState({
         {icon ?? <Inbox className="h-5 w-5" />}
       </div>
       <p className="font-heading text-base font-semibold text-slate-900">{title}</p>
-      <p className="mt-1 max-w-sm text-sm text-slate-500">{description}</p>
+      <p className="mt-1 max-w-sm text-sm leading-6 text-slate-600">{description}</p>
       {action ? <div className="mt-4">{action}</div> : null}
     </div>
   );

@@ -31,7 +31,7 @@ export function LaporanCard({
           </div>
         </div>
         <h3 className="font-heading text-lg font-semibold text-slate-950">{title}</h3>
-        <p className="mt-2 text-sm text-slate-500">{description}</p>
+        <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
       </Card>
     </button>
   );

@@ -93,7 +93,7 @@ export function KirimNotifikasiModal({
       size="xl"
       footer={
         <div className="flex items-center justify-between gap-3">
-          <p className="text-sm text-slate-500">{loadingCount ? "Menghitung..." : `${recipientCount} penerima`}</p>
+          <p className="text-sm text-slate-600">{loadingCount ? "Menghitung..." : `${recipientCount} penerima`}</p>
           <div className="flex gap-2">
             <Button variant="secondary" onClick={onClose}>Batal</Button>
             <Button loading={sending} onClick={form.handleSubmit(submit)}>
@@ -110,7 +110,7 @@ export function KirimNotifikasiModal({
           <Textarea label="Pesan" error={form.formState.errors.body?.message} {...form.register("body")} />
 
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-600">Target</p>
+            <p className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-slate-700">Target</p>
             <div className="grid gap-3 sm:grid-cols-2">
               {targetCards.map((item) => {
                 const Icon = item.icon;
@@ -173,12 +173,12 @@ export function KirimNotifikasiModal({
 
         <div className="rounded-[28px] border-8 border-slate-900 bg-slate-950 p-3 text-white shadow-soft">
           <div className="rounded-[20px] bg-white p-4 text-slate-900">
-            <p className="text-xs font-semibold text-slate-500">TracerStudy FT UNIHAZ</p>
+            <p className="text-[13px] font-semibold text-slate-600">TracerStudy FT UNIHAZ</p>
             <div className="mt-4 rounded-lg bg-navy-50 p-4">
               <p className="font-semibold text-navy">{payload.title}</p>
               <p className="mt-2 text-sm text-slate-600">{payload.body}</p>
             </div>
-            <p className="mt-4 text-xs text-slate-500">{recipientCount} penerima</p>
+            <p className="mt-4 text-[13px] text-slate-600">{recipientCount} penerima</p>
           </div>
         </div>
       </form>
