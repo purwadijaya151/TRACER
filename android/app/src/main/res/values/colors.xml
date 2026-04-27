@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand -->
+    <color name="brand_primary">#15466B</color>
+    <color name="brand_primary_dark">#0A2B45</color>
+    <color name="brand_primary_light">#2E6E97</color>
+    <color name="brand_container">#E9F3FA</color>
+    <color name="brand_border">#B8D2E4</color>
+    <color name="text_on_brand">#FFFFFF</color>
+    <color name="text_on_brand_muted">#F8D98B</color>
+
+    <!-- Actions and emphasis -->
+    <color name="action_primary">#15466B</color>
+    <color name="action_primary_pressed">#0F3553</color>
+    <color name="link_primary">#15466B</color>
+    <color name="accent_primary">#B88718</color>
+    <color name="accent_dark">#7A560C</color>
+    <color name="text_on_accent">#201600</color>
+
+    <!-- Surfaces and text -->
+    <color name="surface_background">#F4F7FA</color>
+    <color name="surface_card">#FFFFFF</color>
+    <color name="surface_muted">#EEF3F7</color>
+    <color name="outline_subtle">#D9E2EC</color>
+    <color name="outline_strong">#B8C5D3</color>
+    <color name="text_primary">#111827</color>
+    <color name="text_secondary">#526071</color>
+    <color name="text_tertiary">#7B8794</color>
+
+    <!-- Status -->
+    <color name="status_success">#168A4A</color>
+    <color name="success_container">#E6F6ED</color>
+    <color name="success_border">#A8DDBC</color>
+    <color name="status_warning">#A16600</color>
+    <color name="warning_container">#FFF3D8</color>
+    <color name="warning_border">#E5BE64</color>
+    <color name="status_error">#C93B3B</color>
+    <color name="info_container">#E8F3FF</color>
+    <color name="info_border">#9FC7EA</color>
+
+    <!-- Data visualization -->
+    <color name="chart_blue">#2E6E97</color>
+    <color name="chart_teal">#2C7A73</color>
+    <color name="chart_green">#168A4A</color>
+    <color name="chart_amber">#B88718</color>
+    <color name="chart_slate">#6B7786</color>
+
+    <!-- Component roles -->
+    <color name="avatar_background">#2C7A73</color>
+    <color name="icon_primary">#15466B</color>
+    <color name="onboarding_dot_active">#15466B</color>
+    <color name="onboarding_dot_inactive">#B8C5D3</color>
+</resources>

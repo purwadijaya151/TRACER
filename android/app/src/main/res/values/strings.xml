@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Tracer Study Fakultas Teknik</string>
+    <string name="app_subtitle">Platform alumni Fakultas Teknik</string>
+    <string name="app_tagline">Menghubungkan Alumni, Membangun Fakultas Teknik</string>
+    <string name="home_info_open">Tracer Study Fakultas Teknik telah dibuka untuk seluruh alumni Fakultas Teknik.</string>
+    <string name="notifications">Notifikasi</string>
+    <string name="placeholder_dash">-</string>
+    <string name="home_greeting_format">Halo, %1$s!</string>
+    <string name="home_meta_format">%1$s - %2$d</string>
+    <string name="tracer_status_submitted">Tracer Study: Sudah Diisi</string>
+    <string name="tracer_status_not_submitted">Tracer Study: Belum Diisi</string>
+    <string name="profile_meta_format">%1$s - %2$s</string>
+    <string name="profile_email_format">Email: %1$s</string>
+    <string name="profile_phone_format">No. HP: %1$s</string>
+    <string name="profile_angkatan_format">Angkatan: %1$d</string>
+    <string name="history_unavailable">Riwayat pengisian belum tersedia</string>
+    <string name="contact_unavailable">Kontak fakultas belum tersedia</string>
+    <string name="reset_password_button_loading">Mengirim...</string>
+    <string name="login_button_loading">Memproses...</string>
+    <string name="register_button_loading">Mendaftarkan...</string>
+    <string name="register_program_studi_label">Program Studi</string>
+    <string name="register_program_studi_hint">Pilih program studi</string>
+    <string name="register_tahun_lulus_label">Tahun Lulus</string>
+    <string name="register_tahun_lulus_hint">Pilih tahun</string>
+    <string name="loading_notifications">Memuat notifikasi...</string>
+    <string name="empty_notifications">Belum ada notifikasi</string>
+</resources>

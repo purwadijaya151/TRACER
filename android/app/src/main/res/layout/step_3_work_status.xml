@@ -1,0 +1,50 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rgStatusKerja"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <RadioButton
+        android:id="@+id/rbBekerja"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:background="@drawable/bg_card"
+        android:buttonTint="@color/form_control_tint"
+        android:padding="@dimen/space_md"
+        android:text="Bekerja sebagai Karyawan/PNS"
+        android:textColor="@color/text_primary" />
+
+    <RadioButton
+        android:id="@+id/rbWirausaha"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_marginTop="@dimen/space_md"
+        android:background="@drawable/bg_card"
+        android:buttonTint="@color/form_control_tint"
+        android:padding="@dimen/space_md"
+        android:text="Wirausaha / Berwiraswasta"
+        android:textColor="@color/text_primary" />
+
+    <RadioButton
+        android:id="@+id/rbStudi"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_marginTop="@dimen/space_md"
+        android:background="@drawable/bg_card"
+        android:buttonTint="@color/form_control_tint"
+        android:padding="@dimen/space_md"
+        android:text="Melanjutkan Studi (S2/S3)"
+        android:textColor="@color/text_primary" />
+
+    <RadioButton
+        android:id="@+id/rbBelum"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_marginTop="@dimen/space_md"
+        android:background="@drawable/bg_card"
+        android:buttonTint="@color/form_control_tint"
+        android:padding="@dimen/space_md"
+        android:text="Sedang Mencari Pekerjaan"
+        android:textColor="@color/text_primary" />
+</RadioGroup>
