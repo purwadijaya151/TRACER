@@ -50,14 +50,17 @@ export async function loginAdmin(input: unknown) {
     return actionError<{ ok: true }>(INDONESIAN_ERRORS.credentials);
   }
 
-  if (!profile?.email) return actionError<{ ok: true }>(INDONESIAN_ERRORS.credentials);
+  if (!profile) return actionError<{ ok: true }>(INDONESIAN_ERRORS.credentials);
+
+  const signInEmail = await getAuthEmail(adminClient, profile.id) ?? profile.email;
+  if (!signInEmail) return actionError<{ ok: true }>(INDONESIAN_ERRORS.credentials);
 
   const userClient = await createClient();
   const {
     data: signInData,
     error: signInError
   } = await userClient.auth.signInWithPassword({
-    email: profile.email,
+    email: signInEmail,
     password
   });
 
@@ -67,6 +70,15 @@ export async function loginAdmin(input: unknown) {
   }
 
   return actionData({ ok: true as const });
+}
+
+async function getAuthEmail(
+  adminClient: ReturnType<typeof createAdminClient>,
+  userId: string
+) {
+  const { data, error } = await adminClient.auth.admin.getUserById(userId);
+  if (error) return null;
+  return data.user?.email ?? null;
 }
 
 async function findAdminProfileByAuthNpp(
