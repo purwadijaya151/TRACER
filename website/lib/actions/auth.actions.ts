@@ -1,7 +1,7 @@
 "use server";
 
 import { INDONESIAN_ERRORS } from "@/lib/constants";
-import { actionData, actionError } from "@/lib/actions/_utils";
+import { actionData, actionError, reportActionError } from "@/lib/actions/_utils";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { loginSchema } from "@/lib/validation";
 
@@ -38,6 +38,7 @@ export async function loginAdmin(input: unknown) {
       profile = await findAdminProfileByAuthNpp(adminClient, npp);
       profileError = null;
     } else {
+      reportActionError("auth.loginAdmin.lookupProfile", profileError);
       return actionError<{ ok: true }>(INDONESIAN_ERRORS.credentials);
     }
   }
@@ -47,6 +48,7 @@ export async function loginAdmin(input: unknown) {
   }
 
   if (profileError) {
+    reportActionError("auth.loginAdmin.profile", profileError);
     return actionError<{ ok: true }>(INDONESIAN_ERRORS.credentials);
   }
 
@@ -66,6 +68,7 @@ export async function loginAdmin(input: unknown) {
 
   if (signInError || !signInData.user || signInData.user.id !== profile.id) {
     await userClient.auth.signOut();
+    if (signInError) reportActionError("auth.loginAdmin.signIn", signInError);
     return actionError<{ ok: true }>(INDONESIAN_ERRORS.credentials);
   }
 
@@ -77,7 +80,10 @@ async function getAuthEmail(
   userId: string
 ) {
   const { data, error } = await adminClient.auth.admin.getUserById(userId);
-  if (error) return null;
+  if (error) {
+    reportActionError("auth.getAuthEmail", error, { userId });
+    return null;
+  }
   return data.user?.email ?? null;
 }
 
@@ -90,7 +96,10 @@ async function findAdminProfileByAuthNpp(
 
   while (true) {
     const { data, error } = await adminClient.auth.admin.listUsers({ page, perPage });
-    if (error) return null;
+    if (error) {
+      reportActionError("auth.findAdminProfileByAuthNpp.listUsers", error, { page });
+      return null;
+    }
 
     const authUser = data.users.find((candidate) => {
       return candidate.app_metadata?.npp === npp || candidate.user_metadata?.npp === npp;
@@ -104,7 +113,10 @@ async function findAdminProfileByAuthNpp(
         .eq("is_admin", true)
         .maybeSingle();
 
-      if (profileError || !profile?.is_admin) return null;
+      if (profileError || !profile?.is_admin) {
+        if (profileError) reportActionError("auth.findAdminProfileByAuthNpp.profile", profileError);
+        return null;
+      }
 
       return {
         id: profile.id,

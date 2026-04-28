@@ -26,6 +26,7 @@ vi.mock("@/lib/actions/_utils", () => ({
   })),
   actionData: (data: unknown) => ({ data, error: null }),
   actionError: (message?: string) => ({ data: null, error: message ?? "error" }),
+  reportActionError: vi.fn(),
   isMissingRelationError: () => false
 }));
 

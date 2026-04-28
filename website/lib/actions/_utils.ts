@@ -43,6 +43,20 @@ export function actionData<T>(data: T): ActionResult<T> {
   return { data, error: null };
 }
 
+export function reportActionError(
+  scope: string,
+  error: unknown,
+  context: Record<string, string | number | boolean | null | undefined> = {}
+) {
+  const details = normalizeError(error);
+  console.error("[tracer-admin]", {
+    scope,
+    ...details,
+    context,
+    timestamp: new Date().toISOString()
+  });
+}
+
 export function getRange(page: number, pageSize: number) {
   const from = Math.max(0, (page - 1) * pageSize);
   return { from, to: from + pageSize - 1 };
@@ -63,4 +77,26 @@ export function isMissingRelationError(error?: { code?: string; message?: string
 
 export function isMissingFunctionError(error?: { code?: string; message?: string } | null) {
   return error?.code === "PGRST202" || error?.message?.includes("Could not find the function");
+}
+
+function normalizeError(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return { message: String(error ?? "unknown error") };
+  }
+
+  const candidate = error as {
+    code?: unknown;
+    message?: unknown;
+    details?: unknown;
+    hint?: unknown;
+    name?: unknown;
+  };
+
+  return {
+    code: typeof candidate.code === "string" ? candidate.code : undefined,
+    name: typeof candidate.name === "string" ? candidate.name : undefined,
+    message: typeof candidate.message === "string" ? candidate.message : "unknown error",
+    details: typeof candidate.details === "string" ? candidate.details : undefined,
+    hint: typeof candidate.hint === "string" ? candidate.hint : undefined
+  };
 }

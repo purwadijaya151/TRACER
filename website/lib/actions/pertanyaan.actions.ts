@@ -5,6 +5,7 @@ import {
   actionError,
   getRange,
   isMissingRelationError,
+  reportActionError,
   requireAdmin
 } from "@/lib/actions/_utils";
 import { buildIlikeOrFilter } from "@/lib/postgrest";
@@ -41,6 +42,7 @@ export async function getQuestionnaireQuestions(filters: QuestionnaireFilters = 
     if (isMissingRelationError(error)) {
       return actionData({ rows: [], total: 0, page, pageSize });
     }
+    reportActionError("pertanyaan.getQuestionnaireQuestions", error, { page, pageSize });
     return actionError<PaginatedResult<QuestionnaireQuestion>>("Gagal memuat pertanyaan");
   }
 
@@ -75,6 +77,10 @@ export async function createQuestionnaireQuestion(input: unknown) {
       return actionError<QuestionnaireQuestion>("Tabel pertanyaan belum tersedia. Jalankan migrasi database terlebih dahulu.");
     }
     if (error.code === "23505") return actionError<QuestionnaireQuestion>("Kode pertanyaan sudah ada pada versi ini");
+    reportActionError("pertanyaan.createQuestionnaireQuestion", error, {
+      version: payload.questionnaire_version,
+      code: payload.code
+    });
     return actionError<QuestionnaireQuestion>("Gagal menyimpan pertanyaan");
   }
 
@@ -102,6 +108,11 @@ export async function updateQuestionnaireQuestion(id: string, input: unknown) {
 
   if (error) {
     if (error.code === "23505") return actionError<QuestionnaireQuestion>("Kode pertanyaan sudah ada pada versi ini");
+    reportActionError("pertanyaan.updateQuestionnaireQuestion", error, {
+      id,
+      version: payload.questionnaire_version,
+      code: payload.code
+    });
     return actionError<QuestionnaireQuestion>("Gagal memperbarui pertanyaan");
   }
 
@@ -117,6 +128,9 @@ export async function deleteQuestionnaireQuestion(id: string) {
     .delete()
     .eq("id", id);
 
-  if (error) return actionError<{ deleted: number }>("Gagal menghapus pertanyaan");
+  if (error) {
+    reportActionError("pertanyaan.deleteQuestionnaireQuestion", error, { id });
+    return actionError<{ deleted: number }>("Gagal menghapus pertanyaan");
+  }
   return actionData({ deleted: 1 });
 }

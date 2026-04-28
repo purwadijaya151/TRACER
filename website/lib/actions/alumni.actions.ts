@@ -6,6 +6,7 @@ import {
   actionError,
   getRange,
   isMissingRelationError,
+  reportActionError,
   requireAdmin,
   sanitizeText
 } from "@/lib/actions/_utils";
@@ -61,7 +62,10 @@ async function assertNonAdminTarget(auth: Awaited<ReturnType<typeof requireAdmin
     .select("id,is_admin")
     .in("id", ids);
 
-  if (error) return { ok: false as const, error: "Gagal memvalidasi data alumni" };
+  if (error) {
+    reportActionError("alumni.assertNonAdminTarget", error);
+    return { ok: false as const, error: "Gagal memvalidasi data alumni" };
+  }
   if ((data ?? []).some((row) => row.is_admin)) {
     return { ok: false as const, error: `Akun admin tidak boleh ${action}` };
   }
@@ -93,6 +97,7 @@ export async function getAlumni(filters: AlumniFilters = {}, page = 1, pageSize 
   const { data, error, count } = await query;
   if (error) {
     if (isMissingRelationError(error)) return getAlumniFromBaseTable(auth, filters, page, pageSize);
+    reportActionError("alumni.getAlumni", error, { page, pageSize });
     return actionError<PaginatedResult<Alumni>>();
   }
 
@@ -138,6 +143,7 @@ export async function getAlumniExport(filters: AlumniFilters = {}) {
 
   if (!result.ok) {
     if (isMissingRelationError(result.error)) return getAlumniExportFromBaseTable(auth, filters);
+    reportActionError("alumni.getAlumniExport", result.error);
     return actionError<Alumni[]>("Gagal mengambil data alumni");
   }
 
@@ -159,7 +165,10 @@ async function getAlumniFromBaseTable(
   pageSize: number
 ) {
   const allRows = await getFilteredAlumniRows(auth, filters);
-  if (!allRows.ok) return actionError<PaginatedResult<Alumni>>(allRows.error);
+  if (!allRows.ok) {
+    reportActionError("alumni.getAlumniFromBaseTable", allRows.error);
+    return actionError<PaginatedResult<Alumni>>(allRows.error);
+  }
 
   const { from, to } = getRange(page, pageSize);
   return actionData({
@@ -172,7 +181,10 @@ async function getAlumniFromBaseTable(
 
 async function getAlumniExportFromBaseTable(auth: AdminContext, filters: AlumniFilters) {
   const allRows = await getFilteredAlumniRows(auth, filters);
-  if (!allRows.ok) return actionError<Alumni[]>(allRows.error);
+  if (!allRows.ok) {
+    reportActionError("alumni.getAlumniExportFromBaseTable", allRows.error);
+    return actionError<Alumni[]>(allRows.error);
+  }
   return actionData(allRows.rows);
 }
 
@@ -194,7 +206,10 @@ async function getFilteredAlumniRows(auth: AdminContext, filters: AlumniFilters)
     return query;
   });
 
-  if (!result.ok) return { ok: false as const, error: "Gagal mengambil data alumni" };
+  if (!result.ok) {
+    reportActionError("alumni.getFilteredAlumniRows", result.error);
+    return { ok: false as const, error: "Gagal mengambil data alumni" };
+  }
 
   const submittedIds = await getSubmittedAlumniIds(auth, result.rows.map((row) => row.id));
   const submittedSet = new Set(submittedIds);
@@ -225,7 +240,10 @@ async function getSubmittedAlumniIds(auth: AdminContext, alumniIds: string[]) {
       .eq("is_submitted", true)
       .range(from, to));
 
-    if (!result.ok) return [];
+    if (!result.ok) {
+      reportActionError("alumni.getSubmittedAlumniIds", result.error);
+      return [];
+    }
     submittedIds.push(...result.rows.map((row) => row.alumni_id).filter(Boolean));
   }
 
@@ -257,7 +275,10 @@ export async function createAlumni(input: unknown) {
     }
   });
 
-  if (userError || !userData.user) return actionError<Alumni>("Gagal membuat akun Auth alumni");
+  if (userError || !userData.user) {
+    reportActionError("alumni.createAlumni.auth", userError);
+    return actionError<Alumni>("Gagal membuat akun Auth alumni");
+  }
 
   const { data, error } = await auth.adminClient
     .from("alumni")
@@ -267,6 +288,7 @@ export async function createAlumni(input: unknown) {
 
   if (error) {
     await auth.adminClient.auth.admin.deleteUser(userData.user.id);
+    reportActionError("alumni.createAlumni.profile", error);
     return actionError<Alumni>("Gagal menyimpan data alumni");
   }
 
@@ -289,7 +311,10 @@ export async function updateAlumni(id: string, input: unknown) {
 
   if (payload.email) {
     const { data: authUser, error: authUserError } = await auth.adminClient.auth.admin.getUserById(id);
-    if (authUserError || !authUser.user) return actionError<Alumni>("Gagal memvalidasi akun Auth alumni");
+    if (authUserError || !authUser.user) {
+      reportActionError("alumni.updateAlumni.getAuthUser", authUserError, { id });
+      return actionError<Alumni>("Gagal memvalidasi akun Auth alumni");
+    }
 
     previousAuthEmail = authUser.user.email ?? null;
     if (previousAuthEmail !== payload.email) {
@@ -297,7 +322,10 @@ export async function updateAlumni(id: string, input: unknown) {
         email: payload.email,
         email_confirm: true
       });
-      if (authUpdateError) return actionError<Alumni>("Email Auth alumni gagal diperbarui");
+      if (authUpdateError) {
+        reportActionError("alumni.updateAlumni.authEmail", authUpdateError, { id });
+        return actionError<Alumni>("Email Auth alumni gagal diperbarui");
+      }
       authEmailChanged = true;
     }
   }
@@ -316,6 +344,7 @@ export async function updateAlumni(id: string, input: unknown) {
         email_confirm: true
       });
     }
+    reportActionError("alumni.updateAlumni.profile", error, { id });
     return actionError<Alumni>("Gagal memperbarui data alumni");
   }
 
@@ -330,7 +359,10 @@ export async function deleteAlumni(id: string) {
   if (!guard.ok) return actionError<{ deleted: number }>(guard.error);
 
   const { error } = await auth.adminClient.auth.admin.deleteUser(id);
-  if (error) return actionError<{ deleted: number }>("Gagal menghapus alumni");
+  if (error) {
+    reportActionError("alumni.deleteAlumni", error, { id });
+    return actionError<{ deleted: number }>("Gagal menghapus alumni");
+  }
 
   return actionData({ deleted: 1 });
 }
@@ -346,7 +378,11 @@ export async function bulkDeleteAlumni(ids: string[]) {
   let deleted = 0;
   for (const id of ids) {
     const { error } = await auth.adminClient.auth.admin.deleteUser(id);
-    if (!error) deleted += 1;
+    if (!error) {
+      deleted += 1;
+    } else {
+      reportActionError("alumni.bulkDeleteAlumni", error, { id });
+    }
   }
 
   return actionData({ deleted });

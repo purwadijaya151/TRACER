@@ -1,6 +1,6 @@
 "use server";
 
-import { actionData, actionError, getRange, requireAdmin } from "@/lib/actions/_utils";
+import { actionData, actionError, getRange, reportActionError, requireAdmin } from "@/lib/actions/_utils";
 import { reportFilterSchema, tracerStudyFilterSchema } from "@/lib/validation";
 import type { PaginatedResult, TracerStudy, TracerStudyFilters } from "@/types";
 
@@ -15,7 +15,7 @@ type TracerSummaryRow = {
 };
 type TracerQueryResult<T> = {
   data: T[] | null;
-  error: { message?: string } | null;
+  error: { code?: string; message?: string; details?: string; hint?: string } | null;
 };
 
 function submissionYearRange(year: number) {
@@ -50,7 +50,10 @@ export async function getTracerStudies(filters: TracerStudyFilters = {}, page = 
   }
 
   const { data, error, count } = await query;
-  if (error) return actionError<PaginatedResult<TracerStudy>>();
+  if (error) {
+    reportActionError("tracerStudy.getTracerStudies", error, { page, pageSize });
+    return actionError<PaginatedResult<TracerStudy>>();
+  }
 
   return actionData({
     rows: (data ?? []) as TracerStudy[],
@@ -83,6 +86,7 @@ export async function getTracerSummary(filters: TracerStudyFilters = {}) {
 
   const rowsResult = await getAllTracerSummaryRows(auth, parsed.data as TracerStudyFilters);
   if (!rowsResult.ok) {
+    reportActionError("tracerStudy.getTracerSummary", rowsResult.error);
     return actionError<{
       avg_ipk: number;
       avg_kesesuaian: number;
@@ -135,7 +139,7 @@ async function getAllTracerSummaryRows(auth: AdminContext, filters: TracerStudyF
     }
 
     const { data, error } = await query;
-    if (error) return { ok: false as const };
+    if (error) return { ok: false as const, error };
 
     const batch = (data ?? []) as unknown as TracerSummaryRow[];
     rows.push(...batch);
@@ -150,7 +154,7 @@ async function getAllTracerExportRows(
 
   for (let from = 0; ; from += TRACER_EXPORT_BATCH_SIZE) {
     const { data, error } = await buildQuery(from, from + TRACER_EXPORT_BATCH_SIZE - 1);
-    if (error) return { ok: false as const };
+    if (error) return { ok: false as const, error };
 
     const batch = data ?? [];
     rows.push(...batch);
@@ -186,7 +190,10 @@ export async function getTracerStudyExport(filters: unknown) {
     return query;
   });
 
-  if (!result.ok) return actionError<TracerStudy[]>("Gagal mengambil data laporan");
+  if (!result.ok) {
+    reportActionError("tracerStudy.getTracerStudyExport", result.error);
+    return actionError<TracerStudy[]>("Gagal mengambil data laporan");
+  }
 
   return actionData(result.rows);
 }

@@ -2,11 +2,19 @@ package com.unihaz.tracerstudy
 
 import com.unihaz.tracerstudy.data.model.QuestionnaireQuestionRemote
 import com.unihaz.tracerstudy.data.model.RemoteRequiredWhen
+import com.unihaz.tracerstudy.presentation.tracerstudy.MatrixPairQuestion
+import com.unihaz.tracerstudy.presentation.tracerstudy.MultiChoiceQuestion
 import com.unihaz.tracerstudy.presentation.tracerstudy.RemoteQuestionnaireMapper
+import com.unihaz.tracerstudy.presentation.tracerstudy.ScaleQuestion
 import com.unihaz.tracerstudy.presentation.tracerstudy.SingleChoiceQuestion
 import com.unihaz.tracerstudy.presentation.tracerstudy.TextQuestion
+import com.unihaz.tracerstudy.presentation.tracerstudy.TextQuestionType
 import com.unihaz.tracerstudy.presentation.tracerstudy.TracerStudyQuestionnaire
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -102,6 +110,115 @@ class RemoteQuestionnaireMapperTest {
     }
 
     @Test
+    fun mapsEverySupportedAdminQuestionType() {
+        val rows = listOf(
+            remoteRow("short_text", "text", 1),
+            remoteRow("long_text", "textarea", 2),
+            remoteRow(
+                code = "waiting_time",
+                questionType = "number",
+                orderIndex = 3,
+                metadata = json("""{"suffix":"bulan"}""").jsonObject
+            ),
+            remoteRow("start_date", "date", 4),
+            remoteRow(
+                code = "employment_status",
+                questionType = "single_choice",
+                orderIndex = 5,
+                options = choiceOptions()
+            ),
+            remoteRow(
+                code = "job_search_methods",
+                questionType = "multi_choice",
+                orderIndex = 6,
+                options = json(
+                    """[
+                      {"field":"f401","label":"Iklan"},
+                      {"field":"f402","value":"ya","label":"Internet"}
+                    ]"""
+                )
+            ),
+            remoteRow(
+                code = "learning_quality",
+                questionType = "scale",
+                orderIndex = 7,
+                options = scaleOptions()
+            ),
+            remoteRow(
+                code = "competency_matrix",
+                questionType = "matrix_pair",
+                orderIndex = 8,
+                options = json(
+                    """{
+                      "leftLabel":"Dikuasai",
+                      "rightLabel":"Diperlukan",
+                      "scale":[
+                        {"value":"1","label":"Rendah"},
+                        {"value":"2","label":"Tinggi"}
+                      ],
+                      "rows":[
+                        {"label":"Etika","leftField":"f1761","rightField":"f1762"}
+                      ]
+                    }"""
+                )
+            )
+        )
+
+        val questions = RemoteQuestionnaireMapper.toSections(rows).single().questions
+        val text = questions[0] as TextQuestion
+        val textarea = questions[1] as TextQuestion
+        val number = questions[2] as TextQuestion
+        val date = questions[3] as TextQuestion
+        val singleChoice = questions[4] as SingleChoiceQuestion
+        val multiChoice = questions[5] as MultiChoiceQuestion
+        val scale = questions[6] as ScaleQuestion
+        val matrix = questions[7] as MatrixPairQuestion
+
+        assertEquals(TextQuestionType.Text, text.inputType)
+        assertTrue(textarea.multiline)
+        assertEquals(TextQuestionType.Number, number.inputType)
+        assertEquals("bulan", number.suffix)
+        assertEquals(TextQuestionType.Date, date.inputType)
+        assertEquals("Bekerja", singleChoice.options.first().label)
+        assertEquals("f401", multiChoice.options.first().field)
+        assertEquals("1", multiChoice.options.first().value)
+        assertEquals("ya", multiChoice.options.last().value)
+        assertEquals("Tinggi", scale.scale.last().label)
+        assertEquals("Dikuasai", matrix.leftLabel)
+        assertEquals("Diperlukan", matrix.rightLabel)
+        assertEquals("Etika", matrix.rows.single().label)
+    }
+
+    @Test
+    fun ignoresInactiveUnsupportedOrIncompleteRemoteRows() {
+        val rows = listOf(
+            remoteRow("inactive", "text", 1, isActive = false),
+            remoteRow("unknown", "slider", 2),
+            remoteRow("empty_choice", "single_choice", 3),
+            remoteRow(
+                code = "broken_matrix",
+                questionType = "matrix_pair",
+                orderIndex = 4,
+                options = json("""{"scale":[],"rows":[]}""")
+            ),
+            QuestionnaireQuestionRemote(
+                code = "",
+                id = "",
+                sectionId = "qa",
+                sectionTitle = "QA",
+                orderIndex = 5,
+                questionText = "Tanpa identifier",
+                questionType = "text"
+            ),
+            remoteRow("valid", "text", 6)
+        )
+
+        val questions = RemoteQuestionnaireMapper.toSections(rows).single().questions
+
+        assertEquals(listOf("valid"), questions.map { it.id })
+    }
+
+    @Test
     fun conditionalRequiredQuestionIsIgnoredWhenHidden() {
         val question = TextQuestion(
             id = "company",
@@ -113,4 +230,40 @@ class RemoteQuestionnaireMapperTest {
         assertFalse(TracerStudyQuestionnaire.isRequired(question, mapOf("f8" to "5")))
         assertTrue(TracerStudyQuestionnaire.isRequired(question, mapOf("f8" to "1")))
     }
+
+    private fun remoteRow(
+        code: String,
+        questionType: String,
+        orderIndex: Int,
+        options: JsonElement = JsonArray(emptyList()),
+        metadata: JsonObject? = null,
+        isActive: Boolean = true
+    ) = QuestionnaireQuestionRemote(
+        code = code,
+        sectionId = "qa",
+        sectionTitle = "QA",
+        sectionOrder = 1,
+        orderIndex = orderIndex,
+        questionText = "Pertanyaan $code",
+        questionType = questionType,
+        isActive = isActive,
+        options = options,
+        metadata = metadata
+    )
+
+    private fun choiceOptions(): JsonElement = json(
+        """[
+          {"value":"1","label":"Bekerja"},
+          {"value":"2","label":"Belum bekerja"}
+        ]"""
+    )
+
+    private fun scaleOptions(): JsonElement = json(
+        """[
+          {"value":"1","label":"Rendah"},
+          {"value":"2","label":"Tinggi"}
+        ]"""
+    )
+
+    private fun json(value: String): JsonElement = Json.parseToJsonElement(value.trimIndent())
 }

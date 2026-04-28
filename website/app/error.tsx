@@ -1,13 +1,23 @@
 "use client";
 
+import { useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 
 export default function ErrorPage({
+  error,
   reset
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  useEffect(() => {
+    console.error("[tracer-admin]", {
+      scope: "app.error",
+      message: error.message,
+      digest: error.digest
+    });
+  }, [error]);
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-navy-50 p-6">
       <div className="max-w-md rounded-lg bg-white p-8 text-center shadow-soft">

@@ -1,8 +1,17 @@
 "use client";
 
+import { useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 
-export default function DashboardError({ reset }: { error: Error; reset: () => void }) {
+export default function DashboardError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  useEffect(() => {
+    console.error("[tracer-admin]", {
+      scope: "dashboard.error",
+      message: error.message,
+      digest: error.digest
+    });
+  }, [error]);
+
   return (
     <div className="flex min-h-[60vh] items-center justify-center">
       <div className="max-w-md rounded-lg bg-white p-8 text-center shadow-soft">

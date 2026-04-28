@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { actionData, actionError, isMissingRelationError, requireAdmin } from "@/lib/actions/_utils";
+import { actionData, actionError, isMissingRelationError, reportActionError, requireAdmin } from "@/lib/actions/_utils";
 import { passwordSchema, pengaturanSchema, profileSchema } from "@/lib/validation";
 import type { Alumni, PengaturanSistem } from "@/types";
 
@@ -28,6 +28,7 @@ export async function getPengaturan() {
 
   if (error) {
     if (isMissingRelationError(error)) return actionData(defaultSettings);
+    reportActionError("pengaturan.getPengaturan", error);
     return actionError<PengaturanSistem>();
   }
   return actionData((data as PengaturanSistem | null) ?? defaultSettings);
@@ -50,6 +51,7 @@ export async function savePengaturan(input: unknown) {
     if (isMissingRelationError(error)) {
       return actionError<PengaturanSistem>("Tabel pengaturan sistem belum tersedia. Jalankan migrasi database terlebih dahulu.");
     }
+    reportActionError("pengaturan.savePengaturan", error);
     return actionError<PengaturanSistem>("Gagal menyimpan pengaturan");
   }
   return actionData(data as PengaturanSistem);
@@ -65,7 +67,10 @@ export async function getAdminProfile() {
     .eq("id", auth.user.id)
     .single();
 
-  if (error) return actionError<Alumni>();
+  if (error) {
+    reportActionError("pengaturan.getAdminProfile", error, { id: auth.user.id });
+    return actionError<Alumni>();
+  }
   return actionData(data as Alumni);
 }
 
@@ -81,14 +86,20 @@ export async function updateAdminProfile(input: unknown) {
 
   if (auth.user.email !== parsed.data.email) {
     const { data: authUser, error: authUserError } = await auth.adminClient.auth.admin.getUserById(auth.user.id);
-    if (authUserError || !authUser.user) return actionError<Alumni>("Gagal memvalidasi akun Auth admin");
+    if (authUserError || !authUser.user) {
+      reportActionError("pengaturan.updateAdminProfile.getAuthUser", authUserError, { id: auth.user.id });
+      return actionError<Alumni>("Gagal memvalidasi akun Auth admin");
+    }
 
     previousAuthEmail = authUser.user.email ?? auth.user.email ?? null;
     const { error: authUpdateError } = await auth.adminClient.auth.admin.updateUserById(auth.user.id, {
       email: parsed.data.email,
       email_confirm: true
     });
-    if (authUpdateError) return actionError<Alumni>("Email Auth admin gagal diperbarui");
+    if (authUpdateError) {
+      reportActionError("pengaturan.updateAdminProfile.authEmail", authUpdateError, { id: auth.user.id });
+      return actionError<Alumni>("Email Auth admin gagal diperbarui");
+    }
     authEmailChanged = true;
   }
 
@@ -111,6 +122,7 @@ export async function updateAdminProfile(input: unknown) {
         email_confirm: true
       });
     }
+    reportActionError("pengaturan.updateAdminProfile.profile", error, { id: auth.user.id });
     return actionError<Alumni>("Gagal memperbarui profil");
   }
 
@@ -131,10 +143,16 @@ export async function changePassword(input: unknown) {
     password: parsed.data.oldPassword
   });
 
-  if (verifyError) return actionError<{ changed: boolean }>("Password lama tidak sesuai");
+  if (verifyError) {
+    reportActionError("pengaturan.changePassword.verify", verifyError, { id: auth.user.id });
+    return actionError<{ changed: boolean }>("Password lama tidak sesuai");
+  }
 
   const { error } = await userClient.auth.updateUser({ password: parsed.data.newPassword });
-  if (error) return actionError<{ changed: boolean }>("Gagal mengganti password");
+  if (error) {
+    reportActionError("pengaturan.changePassword.update", error, { id: auth.user.id });
+    return actionError<{ changed: boolean }>("Gagal mengganti password");
+  }
 
   return actionData({ changed: true });
 }

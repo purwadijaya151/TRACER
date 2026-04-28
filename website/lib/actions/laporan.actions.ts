@@ -1,6 +1,6 @@
 "use server";
 
-import { actionData, actionError, requireAdmin } from "@/lib/actions/_utils";
+import { actionData, actionError, reportActionError, requireAdmin } from "@/lib/actions/_utils";
 import { reportFilterSchema } from "@/lib/validation";
 import type { Alumni, ReportData, ReportType, TracerStudy } from "@/types";
 
@@ -8,7 +8,7 @@ const REPORT_BATCH_SIZE = 1000;
 
 type ReportQueryResult<T> = {
   data: T[] | null;
-  error: { message?: string } | null;
+  error: { code?: string; message?: string; details?: string; hint?: string } | null;
 };
 
 function submissionYearRange(year: number) {
@@ -25,7 +25,7 @@ async function getAllReportRows<T>(
 
   for (let from = 0; ; from += REPORT_BATCH_SIZE) {
     const { data, error } = await buildQuery(from, from + REPORT_BATCH_SIZE - 1);
-    if (error) return { ok: false as const };
+    if (error) return { ok: false as const, error };
 
     const batch = data ?? [];
     rows.push(...batch);
@@ -58,7 +58,10 @@ export async function getReportData(reportType: ReportType, filters: unknown) {
       return query;
     });
 
-    if (!result.ok) return actionError<ReportData>("Gagal mengambil data alumni");
+    if (!result.ok) {
+      reportActionError("laporan.getReportData.alumni", result.error, { reportType });
+      return actionError<ReportData>("Gagal mengambil data alumni");
+    }
 
     const rows = result.rows.map((row) => {
       const { tracer_submitted: tracerSubmitted, ...alumni } = row;
@@ -91,7 +94,10 @@ export async function getReportData(reportType: ReportType, filters: unknown) {
     return query;
   });
 
-  if (!result.ok) return actionError<ReportData>("Gagal mengambil data laporan");
+  if (!result.ok) {
+    reportActionError("laporan.getReportData.tracer", result.error, { reportType });
+    return actionError<ReportData>("Gagal mengambil data laporan");
+  }
 
   return actionData<ReportData>({ type: reportType, rows: result.rows });
 }
@@ -113,7 +119,10 @@ export async function getReportPreviewCount(reportType: ReportType, filters: unk
     if (values.tahunMulai) query = query.gte("tahun_lulus", values.tahunMulai);
     if (values.tahunAkhir) query = query.lte("tahun_lulus", values.tahunAkhir);
     const { count, error } = await query;
-    if (error) return actionError<number>("Gagal menghitung data laporan");
+    if (error) {
+      reportActionError("laporan.getReportPreviewCount.alumni", error, { reportType });
+      return actionError<number>("Gagal menghitung data laporan");
+    }
     return actionData(count ?? 0);
   }
 
@@ -131,6 +140,9 @@ export async function getReportPreviewCount(reportType: ReportType, filters: unk
     query = query.gte("submitted_at", range.start).lt("submitted_at", range.end);
   }
   const { count, error } = await query;
-  if (error) return actionError<number>("Gagal menghitung data laporan");
+  if (error) {
+    reportActionError("laporan.getReportPreviewCount.tracer", error, { reportType });
+    return actionError<number>("Gagal menghitung data laporan");
+  }
   return actionData(count ?? 0);
 }

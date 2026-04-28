@@ -6,6 +6,7 @@ import {
   getRange,
   isMissingFunctionError,
   isMissingRelationError,
+  reportActionError,
   requireAdmin
 } from "@/lib/actions/_utils";
 import { buildIlikeOrFilter } from "@/lib/postgrest";
@@ -40,6 +41,7 @@ export async function getRecipientCount(input: unknown) {
 
   if (error) {
     if (isMissingFunctionError(error)) return countRecipientsFromBaseTables(auth, payload);
+    reportActionError("notifikasi.getRecipientCount", error, { target: payload.target });
     return actionError<number>("Gagal menghitung penerima");
   }
   return actionData(Number(data ?? 0));
@@ -71,6 +73,7 @@ export async function getNotifications(filters: NotificationFilters = {}, page =
         pageSize
       });
     }
+    reportActionError("notifikasi.getNotifications", error, { page, pageSize });
     return actionError<PaginatedResult<NotificationBroadcast>>();
   }
 
@@ -96,6 +99,7 @@ export async function getNotificationStats() {
     if ([total.error, read.error, unread.error].some(isMissingRelationError)) {
       return actionData({ total: 0, read: 0, unread: 0 });
     }
+    reportActionError("notifikasi.getNotificationStats", total.error ?? read.error ?? unread.error);
     return actionError<{ total: number; read: number; unread: number }>();
   }
 
@@ -138,6 +142,7 @@ export async function broadcastNotifikasi(input: unknown) {
     if (isMissingFunctionError(error)) {
       return actionError<{ sent: number }>("Fitur broadcast belum tersedia. Jalankan migrasi database notifikasi terlebih dahulu.");
     }
+    reportActionError("notifikasi.broadcastNotifikasi", error, { target: payload.target });
     return actionError<{ sent: number }>("Gagal mengirim notifikasi");
   }
 
@@ -154,6 +159,7 @@ export async function deleteNotifikasi(id: string) {
   });
   if (error) {
     if (isMissingFunctionError(error)) return actionError<{ deleted: number }>("Fitur hapus broadcast belum tersedia");
+    reportActionError("notifikasi.deleteNotifikasi", error, { id });
     return actionError<{ deleted: number }>("Gagal menghapus notifikasi");
   }
 
@@ -186,11 +192,17 @@ async function countRecipientsFromBaseTables(auth: AdminContext, payload: Broadc
         .eq("alumni.is_admin", false)
     ]);
 
-    if (totalResult.error || submittedResult.error) return actionError<number>("Gagal menghitung penerima");
+    if (totalResult.error || submittedResult.error) {
+      reportActionError("notifikasi.countRecipientsFromBaseTables.belum_mengisi", totalResult.error ?? submittedResult.error);
+      return actionError<number>("Gagal menghitung penerima");
+    }
     return actionData(Math.max((totalResult.count ?? 0) - (submittedResult.count ?? 0), 0));
   }
 
   const { count, error } = await query;
-  if (error) return actionError<number>("Gagal menghitung penerima");
+  if (error) {
+    reportActionError("notifikasi.countRecipientsFromBaseTables", error, { target: payload.target });
+    return actionError<number>("Gagal menghitung penerima");
+  }
   return actionData(count ?? 0);
 }
