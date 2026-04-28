@@ -18,6 +18,55 @@ export type WaktuTunggu =
   | "Lebih dari 6 bulan";
 
 export type NotifTarget = "all" | "prodi" | "tahun" | "belum_mengisi";
+export type QuestionType =
+  | "text"
+  | "textarea"
+  | "number"
+  | "date"
+  | "single_choice"
+  | "multi_choice"
+  | "scale"
+  | "matrix_pair";
+
+export interface QuestionChoiceOption {
+  value: string;
+  label: string;
+}
+
+export interface QuestionMultiChoiceOption extends QuestionChoiceOption {
+  field: string;
+}
+
+export interface QuestionMatrixRow {
+  label: string;
+  leftField: string;
+  rightField: string;
+}
+
+export interface QuestionRequiredWhen {
+  field: string;
+  values: string[];
+}
+
+export interface QuestionnaireQuestion {
+  id: string;
+  questionnaire_version: string;
+  code: string;
+  section_id: string;
+  section_title: string;
+  section_order: number;
+  order_index: number;
+  question_text: string;
+  description?: string | null;
+  question_type: QuestionType;
+  is_required: boolean;
+  is_active: boolean;
+  options: unknown;
+  required_when?: QuestionRequiredWhen | null;
+  metadata?: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+}
 
 export interface Alumni {
   id: string;
@@ -151,4 +200,12 @@ export interface TracerStudyFilters {
 export interface NotificationFilters {
   search?: string;
   read?: "all" | "read" | "unread";
+}
+
+export interface QuestionnaireFilters {
+  search?: string;
+  section?: string | "all";
+  type?: QuestionType | "all";
+  status?: "all" | "active" | "inactive";
+  version?: string;
 }

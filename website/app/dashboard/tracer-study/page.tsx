@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Download } from "lucide-react";
+import { AlertTriangle, Download } from "lucide-react";
 import { toast } from "sonner";
 import { TracerStudyDetailModal } from "@/components/tracer-study/TracerStudyDetailModal";
 import { TracerStudyTable } from "@/components/tracer-study/TracerStudyTable";
@@ -16,6 +16,7 @@ import { useTracerStudy } from "@/lib/hooks/useTracerStudy";
 import type { TracerStudy, TracerStudyFilters } from "@/types";
 
 const pageSize = 10;
+const LARGE_EXPORT_THRESHOLD = 1000;
 
 export default function TracerStudyPage() {
   const [page, setPage] = useState(1);
@@ -36,38 +37,49 @@ export default function TracerStudyPage() {
     [prodi, statusKerja, tahunLulus, tahunPengisian]
   );
   const { data, summary, loading } = useTracerStudy(filters, page, pageSize);
+  const totalRows = data?.total ?? 0;
+  const isLargeExport = totalRows > LARGE_EXPORT_THRESHOLD;
 
   const runExport = async (format: "pdf" | "excel") => {
     setExporting(true);
-    const result = await getTracerStudyExport({
-      prodi: prodi === "all" ? [] : [prodi],
-      tahunMulai: tahunLulus === "all" ? undefined : Number(tahunLulus),
-      tahunAkhir: tahunLulus === "all" ? undefined : Number(tahunLulus),
-      tahunPengisian: tahunPengisian === "all" ? undefined : Number(tahunPengisian),
-      status_kerja: statusKerja
-    });
-    setExporting(false);
-
-    if (result.error || !result.data) {
-      toast.error(result.error ?? "Gagal export data");
-      return;
+    if (isLargeExport) {
+      toast.info(`Menyiapkan ${totalRows.toLocaleString("id-ID")} respons. Proses export bisa lebih lama.`);
     }
-    if (format === "pdf") {
-      const { exportPDF } = await import("@/lib/export/exportPDF");
-      exportPDF(result.data, "Laporan Tracer Study", filters);
-    } else {
-      const { exportExcel } = await import("@/lib/export/exportExcel");
-      exportExcel(result.data, "laporan-tracer-study");
+
+    try {
+      const result = await getTracerStudyExport({
+        prodi: prodi === "all" ? [] : [prodi],
+        tahunMulai: tahunLulus === "all" ? undefined : Number(tahunLulus),
+        tahunAkhir: tahunLulus === "all" ? undefined : Number(tahunLulus),
+        tahunPengisian: tahunPengisian === "all" ? undefined : Number(tahunPengisian),
+        status_kerja: statusKerja
+      });
+
+      if (result.error || !result.data) {
+        toast.error(result.error ?? "Gagal export data");
+        return;
+      }
+      if (format === "pdf") {
+        const { exportPDF } = await import("@/lib/export/exportPDF");
+        exportPDF(result.data, "Laporan Tracer Study", filters);
+      } else {
+        const { exportExcel } = await import("@/lib/export/exportExcel");
+        exportExcel(result.data, "laporan-tracer-study");
+      }
+    } catch {
+      toast.error("Gagal membuat file export tracer study");
+    } finally {
+      setExporting(false);
     }
   };
 
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="p-4"><p className="text-sm font-medium text-slate-600">Rata-rata IPK</p><p className="mt-2 font-heading text-2xl font-semibold">{summary?.avg_ipk ?? 0}</p></Card>
-        <Card className="p-4"><p className="text-sm font-medium text-slate-600">Waktu Tunggu Dominan</p><p className="mt-2 font-heading text-lg font-semibold">{summary?.avg_waktu_tunggu ?? "-"}</p></Card>
-        <Card className="p-4"><p className="text-sm font-medium text-slate-600">Kesesuaian Rata-rata</p><p className="mt-2 font-heading text-2xl font-semibold">{summary?.avg_kesesuaian ?? 0}/5</p></Card>
-        <Card className="p-4"><p className="text-sm font-medium text-slate-600">Modal Gaji</p><p className="mt-2 font-heading text-lg font-semibold">{summary?.modal_gaji ?? "-"}</p></Card>
+        <Card className="p-4"><p className="text-sm font-medium leading-5 text-slate-600">Rata-rata IPK</p><p className="mt-2 font-heading text-2xl font-semibold leading-8">{summary?.avg_ipk ?? 0}</p></Card>
+        <Card className="p-4"><p className="text-sm font-medium leading-5 text-slate-600">Waktu Tunggu Dominan</p><p className="mt-2 font-heading text-lg font-semibold leading-7">{summary?.avg_waktu_tunggu ?? "-"}</p></Card>
+        <Card className="p-4"><p className="text-sm font-medium leading-5 text-slate-600">Kesesuaian Rata-rata</p><p className="mt-2 font-heading text-2xl font-semibold leading-8">{summary?.avg_kesesuaian ?? 0}/5</p></Card>
+        <Card className="p-4"><p className="text-sm font-medium leading-5 text-slate-600">Modal Gaji</p><p className="mt-2 font-heading text-lg font-semibold leading-7">{summary?.modal_gaji ?? "-"}</p></Card>
       </div>
 
       <Card>
@@ -94,6 +106,13 @@ export default function TracerStudyPage() {
             </Select>
             <Input placeholder="Tahun pengisian" value={tahunPengisian === "all" ? "" : tahunPengisian} onChange={(e) => { setPage(1); setTahunPengisian(e.target.value || "all"); }} />
           </div>
+
+          {isLargeExport ? (
+            <div className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-800">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>Export akan mencakup {totalRows.toLocaleString("id-ID")} respons sesuai filter aktif. Proses file bisa lebih lama.</span>
+            </div>
+          ) : null}
 
           <TracerStudyTable rows={data?.rows ?? []} loading={loading} onDetail={setDetail} />
         </CardContent>

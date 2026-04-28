@@ -1,5 +1,9 @@
 import { z } from "zod";
 import {
+  NPP_DIGIT_LENGTH,
+  NPP_REGEX,
+  QUESTIONNAIRE_DEFAULT_VERSION,
+  QUESTION_TYPE_OPTIONS,
   PRODI_OPTIONS,
   RENTANG_GAJI_OPTIONS,
   STATUS_KERJA_OPTIONS,
@@ -7,7 +11,10 @@ import {
 } from "@/lib/constants";
 
 export const loginSchema = z.object({
-  npp: z.string().trim().min(3, "NPP wajib diisi").max(30, "NPP maksimal 30 karakter"),
+  npp: z
+    .string()
+    .trim()
+    .regex(NPP_REGEX, `NPP harus ${NPP_DIGIT_LENGTH} digit angka`),
   password: z.string().min(6, "Password minimal 6 karakter")
 });
 
@@ -21,7 +28,7 @@ export const alumniSchema = z.object({
   tempat_lahir: z.string().max(100).optional().nullable(),
   tanggal_lahir: z.string().optional().nullable(),
   no_hp: z.string().max(20).optional().nullable(),
-  email: z.string().email("Email tidak valid").optional().nullable().or(z.literal("")),
+  email: z.string().trim().email("Email tidak valid"),
   alamat: z.string().optional().nullable(),
   foto_url: z.string().url().optional().nullable().or(z.literal("")),
   password: z.string().min(6, "Password minimal 6 karakter").optional().or(z.literal(""))
@@ -115,4 +122,35 @@ export const tracerStudySchema = z.object({
   status_kerja: z.enum(STATUS_KERJA_OPTIONS as [string, ...string[]]),
   rentang_gaji: z.enum(RENTANG_GAJI_OPTIONS as [string, ...string[]]).optional().nullable(),
   waktu_tunggu: z.enum(WAKTU_TUNGGU_OPTIONS as [string, ...string[]]).optional().nullable()
+});
+
+export const questionnaireQuestionSchema = z.object({
+  questionnaire_version: z.string().trim().min(2).max(40).default(QUESTIONNAIRE_DEFAULT_VERSION),
+  code: z
+    .string()
+    .trim()
+    .min(1, "Kode pertanyaan wajib diisi")
+    .max(60)
+    .regex(/^[A-Za-z0-9_.-]+$/, "Kode hanya boleh huruf, angka, titik, garis bawah, atau minus"),
+  section_id: z
+    .string()
+    .trim()
+    .min(1, "Kode section wajib diisi")
+    .max(60)
+    .regex(/^[A-Za-z0-9_.-]+$/, "Kode section hanya boleh huruf, angka, titik, garis bawah, atau minus"),
+  section_title: z.string().trim().min(3, "Nama section wajib diisi").max(120),
+  section_order: z.coerce.number().int().min(1).max(999),
+  order_index: z.coerce.number().int().min(1).max(9999),
+  question_text: z.string().trim().min(5, "Pertanyaan wajib diisi").max(600),
+  description: z.string().max(500).optional().nullable(),
+  question_type: z.enum(QUESTION_TYPE_OPTIONS as [string, ...string[]]),
+  is_required: z.coerce.boolean().default(false),
+  is_active: z.coerce.boolean().default(true),
+  options_text: z.string().max(5000).optional().nullable(),
+  matrix_rows_text: z.string().max(5000).optional().nullable(),
+  required_when_field: z.string().max(60).optional().nullable(),
+  required_when_values: z.string().max(500).optional().nullable(),
+  suffix: z.string().max(40).optional().nullable(),
+  matrix_left_label: z.string().max(80).optional().nullable(),
+  matrix_right_label: z.string().max(80).optional().nullable()
 });

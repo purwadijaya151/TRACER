@@ -1,6 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.TracerStudy" parent="Theme.MaterialComponents.Light.NoActionBar">
+    <style name="Theme.TracerStudy" parent="Theme.TracerStudy.Base" />
+
+    <style name="Theme.TracerStudy.Base" parent="Theme.MaterialComponents.Light.NoActionBar">
         <item name="colorPrimary">@color/action_primary</item>
         <item name="colorPrimaryVariant">@color/brand_primary_dark</item>
         <item name="colorOnPrimary">@color/text_on_brand</item>
@@ -13,7 +15,6 @@
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:statusBarColor">@color/brand_primary_dark</item>
         <item name="android:navigationBarColor">@color/surface_card</item>
-        <item name="android:windowLightNavigationBar">true</item>
         <item name="android:textColorPrimary">@color/text_primary</item>
         <item name="android:textColorSecondary">@color/text_secondary</item>
         <item name="android:editTextStyle">@style/Widget.TracerStudy.EditText</item>

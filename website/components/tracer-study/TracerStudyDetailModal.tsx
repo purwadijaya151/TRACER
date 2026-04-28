@@ -17,7 +17,7 @@ import type { TracerStudy } from "@/types";
 function Field({ label, value }: { label: string; value?: React.ReactNode }) {
   return (
     <div>
-      <p className="text-[13px] font-semibold uppercase tracking-wide text-slate-600">{label}</p>
+      <p className="text-sm font-medium leading-5 text-slate-600">{label}</p>
       <p className="mt-1 text-sm leading-6 text-slate-900">{value || "-"}</p>
     </div>
   );
@@ -29,10 +29,10 @@ function QuestionAnswer({ question, answers }: { question: QuestionnaireQuestion
   if (question.type === "matrix_pair") {
     return (
       <div className="sm:col-span-2">
-        <p className="text-[13px] font-semibold uppercase tracking-wide text-slate-600">{question.label}</p>
+        <p className="text-sm font-medium leading-5 text-slate-600">{question.label}</p>
         <div className="mt-3 overflow-hidden rounded-md border border-slate-200">
           <table className="min-w-full divide-y divide-slate-200 text-sm leading-6">
-            <thead className="bg-slate-50 text-left text-[13px] font-semibold uppercase tracking-wide text-slate-600">
+            <thead className="bg-slate-50 text-left text-sm font-semibold leading-5 text-slate-600">
               <tr>
                 <th className="px-3 py-2">Kompetensi</th>
                 <th className="px-3 py-2">{question.leftLabel}</th>
@@ -148,7 +148,7 @@ export function TracerStudyDetailModal({
             <TabPanel className="space-y-8">
               {questionnaireSections.map((section) => (
                 <section key={section.id}>
-                  <h3 className="font-heading text-base font-semibold text-slate-900">{section.title}</h3>
+                  <h3 className="font-heading text-lg font-semibold leading-7 text-slate-900">{section.title}</h3>
                   <div className="mt-4 grid gap-4 sm:grid-cols-2">
                     {section.questions.map((question) => (
                       <QuestionAnswer key={question.id} question={question} answers={answers} />

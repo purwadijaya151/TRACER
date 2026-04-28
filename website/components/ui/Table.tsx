@@ -9,8 +9,8 @@ export function Table({
   className?: string;
 }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-slate-100 bg-white">
-      <table className={cn("min-w-full divide-y divide-slate-100 text-sm leading-6", className)}>{children}</table>
+    <div className="max-w-full overflow-x-auto overscroll-x-contain rounded-lg border border-slate-100 bg-white">
+      <table className={cn("w-full min-w-full divide-y divide-slate-100 text-[15px] leading-6", className)}>{children}</table>
     </div>
   );
 }
@@ -25,7 +25,7 @@ export function Th({
   return (
     <th
       className={cn(
-        "sticky top-0 bg-white px-4 py-3 text-left font-heading text-[13px] font-semibold uppercase tracking-wide text-slate-700",
+        "sticky top-0 bg-white px-4 py-3 text-left text-sm font-semibold leading-5 text-slate-700",
         className
       )}
     >

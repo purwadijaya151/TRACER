@@ -3,6 +3,7 @@ package com.unihaz.tracerstudy.data.repository
 import com.unihaz.tracerstudy.core.network.NetworkResult
 import com.unihaz.tracerstudy.core.utils.DateUtils
 import com.unihaz.tracerstudy.data.local.SessionManager
+import com.unihaz.tracerstudy.data.model.QuestionnaireQuestionRemote
 import com.unihaz.tracerstudy.data.model.TracerStudy
 import com.unihaz.tracerstudy.data.model.toUpsert
 import io.ktor.client.request.get
@@ -12,8 +13,27 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.encodeToString
+import java.net.URLEncoder
 
 class TracerStudyRepository(private val sessionManager: SessionManager) {
+    suspend fun getQuestionnaireQuestions(version: String): NetworkResult<List<QuestionnaireQuestionRemote>> = runCatching {
+        val token = sessionManager.getSession()?.accessToken
+            ?: return NetworkResult.Error("Sesi login tidak ditemukan")
+        val encodedVersion = URLEncoder.encode(version, "UTF-8")
+        val response = SupabaseRest.httpClient.get(
+            "${SupabaseRest.baseUrl}/rest/v1/questionnaire_questions" +
+                "?select=*" +
+                "&questionnaire_version=eq.$encodedVersion" +
+                "&is_active=eq.true" +
+                "&order=section_order.asc,order_index.asc,code.asc"
+        ) {
+            SupabaseRest.run { supabaseHeaders(token) }
+        }
+        SupabaseRest.parseResponse(response) { body ->
+            SupabaseRest.json.decodeFromString(ListSerializer(QuestionnaireQuestionRemote.serializer()), body)
+        }
+    }.getOrElse { SupabaseRest.mapThrowable(it) }
+
     suspend fun getDraft(alumniId: String): NetworkResult<TracerStudy?> = runCatching {
         val token = sessionManager.getSession()?.accessToken
             ?: return NetworkResult.Error("Sesi login tidak ditemukan")

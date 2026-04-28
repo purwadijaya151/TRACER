@@ -92,9 +92,9 @@ export function KirimNotifikasiModal({
       title="Kirim Notifikasi"
       size="xl"
       footer={
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-slate-600">{loadingCount ? "Menghitung..." : `${recipientCount} penerima`}</p>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 sm:justify-end">
             <Button variant="secondary" onClick={onClose}>Batal</Button>
             <Button loading={sending} onClick={form.handleSubmit(submit)}>
               <Send className="h-4 w-4" />
@@ -110,7 +110,7 @@ export function KirimNotifikasiModal({
           <Textarea label="Pesan" error={form.formState.errors.body?.message} {...form.register("body")} />
 
           <div>
-            <p className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-slate-700">Target</p>
+            <p className="mb-2 text-sm font-medium leading-5 text-slate-700">Target</p>
             <div className="grid gap-3 sm:grid-cols-2">
               {targetCards.map((item) => {
                 const Icon = item.icon;
@@ -120,7 +120,7 @@ export function KirimNotifikasiModal({
                     type="button"
                     key={item.value}
                     className={cn(
-                      "focus-ring rounded-lg border p-4 text-left transition",
+                      "focus-ring rounded-lg border p-3 text-left transition sm:p-4",
                       active ? "border-navy bg-navy-50 text-navy" : "border-slate-200 hover:bg-slate-50"
                     )}
                     onClick={() => {
@@ -171,14 +171,14 @@ export function KirimNotifikasiModal({
           ) : null}
         </div>
 
-        <div className="rounded-[28px] border-8 border-slate-900 bg-slate-950 p-3 text-white shadow-soft">
-          <div className="rounded-[20px] bg-white p-4 text-slate-900">
-            <p className="text-[13px] font-semibold text-slate-600">TracerStudy FT UNIHAZ</p>
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-slate-900 lg:rounded-[28px] lg:border-8 lg:border-slate-900 lg:bg-slate-950 lg:p-3 lg:text-white lg:shadow-soft">
+          <div className="rounded-lg bg-white p-4 text-slate-900 lg:rounded-[20px]">
+            <p className="text-sm font-medium leading-5 text-slate-600">TracerStudy FT UNIHAZ</p>
             <div className="mt-4 rounded-lg bg-navy-50 p-4">
               <p className="font-semibold text-navy">{payload.title}</p>
               <p className="mt-2 text-sm text-slate-600">{payload.body}</p>
             </div>
-            <p className="mt-4 text-[13px] text-slate-600">{recipientCount} penerima</p>
+            <p className="mt-4 text-sm leading-5 text-slate-600">{recipientCount} penerima</p>
           </div>
         </div>
       </form>

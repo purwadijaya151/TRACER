@@ -55,8 +55,8 @@ export function Header({
           <Menu className="h-5 w-5" />
         </button>
         <div>
-          <h1 className="font-heading text-xl font-semibold text-slate-950">{title}</h1>
-          <p className="hidden text-[13px] text-slate-600 sm:block">Panel Admin TracerStudy FT UNIHAZ</p>
+          <h1 className="font-heading text-[22px] font-semibold leading-7 text-slate-950">{title}</h1>
+          <p className="hidden text-sm leading-5 text-slate-600 sm:block">Panel Admin TracerStudy FT UNIHAZ</p>
         </div>
       </div>
 
@@ -80,8 +80,8 @@ export function Header({
             {stats?.unread ? <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500" /> : null}
           </PopoverButton>
           <PopoverPanel className="absolute right-0 z-40 mt-2 w-72 rounded-lg border border-slate-100 bg-white p-4 shadow-overlay">
-            <p className="font-heading text-sm font-semibold text-slate-900">Ringkasan Notifikasi</p>
-            <div className="mt-3 grid grid-cols-3 gap-2 text-center text-[13px] text-slate-700">
+            <p className="font-heading text-base font-semibold leading-6 text-slate-900">Ringkasan Notifikasi</p>
+            <div className="mt-3 grid grid-cols-3 gap-2 text-center text-sm leading-5 text-slate-700">
               <div className="rounded-md bg-navy-50 p-2"><p className="font-semibold text-navy">{stats?.total ?? 0}</p><p>Total</p></div>
               <div className="rounded-md bg-emerald-50 p-2"><p className="font-semibold text-emerald-700">{stats?.read ?? 0}</p><p>Dibaca</p></div>
               <div className="rounded-md bg-amber-50 p-2"><p className="font-semibold text-amber-700">{stats?.unread ?? 0}</p><p>Belum</p></div>
@@ -96,7 +96,7 @@ export function Header({
             <Avatar name={adminName} src={adminPhoto} size={34} />
             <div className="hidden min-w-0 text-left sm:block">
               <p className="max-w-32 truncate text-sm font-semibold text-slate-900">{adminName ?? "Admin"}</p>
-              <p className="text-[13px] text-slate-600">Admin</p>
+              <p className="text-sm leading-5 text-slate-600">Admin</p>
             </div>
           </MenuButton>
           <MenuItems className="absolute right-0 z-40 mt-2 w-48 rounded-lg border border-slate-100 bg-white p-1 shadow-overlay">

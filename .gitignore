@@ -8,11 +8,13 @@ local.properties
 
 # Web
 website/.next/
+website/.next-dev*/
 website/node_modules/
 website/out/
 website/dist/
 website/coverage/
 website/.env*.local
+website/tsconfig.tsbuildinfo
 
 # Android
 android/.gradle/
@@ -28,6 +30,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+tmp/
 
 # OS/editor
 .DS_Store

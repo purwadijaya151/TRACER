@@ -17,7 +17,7 @@ export function Toggle({
   return (
     <Switch.Group as="div" className="flex items-center justify-between gap-4 rounded-lg border border-slate-100 p-4">
       <div>
-        <Switch.Label className="text-sm font-semibold text-slate-900">{label}</Switch.Label>
+        <Switch.Label className="text-[15px] font-semibold leading-6 text-slate-900">{label}</Switch.Label>
         {description ? <Switch.Description className="mt-1 text-sm leading-6 text-slate-600">{description}</Switch.Description> : null}
       </div>
       <Switch

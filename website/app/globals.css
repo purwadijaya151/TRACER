@@ -12,12 +12,16 @@
 
 html {
   background: #f0f2f8;
+  text-rendering: optimizeLegibility;
 }
 
 body {
   min-height: 100vh;
   color: #151c27;
   background: #f0f2f8;
+  line-height: 1.5;
+  font-kerning: normal;
+  font-feature-settings: "kern" 1, "liga" 1;
 }
 
 button,

@@ -18,7 +18,11 @@ const poppins = Poppins({
 
 export const metadata: Metadata = {
   title: "TracerStudy FT UNIHAZ Admin",
-  description: "Panel admin web TracerStudy FT UNIHAZ"
+  description: "Panel admin web TracerStudy FT UNIHAZ",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png"
+  }
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -1,26 +1,34 @@
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { createClient } from "@supabase/supabase-js";
+import {
+  envOrDefault,
+  getAppDir,
+  loadEnvFiles,
+  numberEnvOrDefault,
+  requiredEnv
+} from "./lib/env.mjs";
 
-const scriptDir = path.dirname(fileURLToPath(import.meta.url));
-const appDir = path.resolve(scriptDir, "..");
+const appDir = getAppDir(import.meta.url);
+const env = loadEnvFiles(appDir);
 
-loadEnvFile(path.join(appDir, ".env.local"));
-
-const supabaseUrl = requiredEnv("NEXT_PUBLIC_SUPABASE_URL");
-const serviceRoleKey = requiredEnv("SUPABASE_SERVICE_ROLE_KEY");
+const supabaseUrl = requiredEnv("NEXT_PUBLIC_SUPABASE_URL", env);
+const serviceRoleKey = requiredEnv("SUPABASE_SERVICE_ROLE_KEY", env);
+const NPP_DIGIT_LENGTH = 18;
+const NPP_PATTERN = new RegExp(`^\\d{${NPP_DIGIT_LENGTH}}$`);
 
 const admin = {
-  npp: requiredEnv("ADMIN_NPP"),
-  email: requiredEnv("ADMIN_EMAIL"),
-  password: requiredEnv("ADMIN_PASSWORD"),
-  namaLengkap: requiredEnv("ADMIN_NAME"),
-  staffCode: requiredEnv("ADMIN_STAFF_CODE"),
-  prodi: envOrDefault("ADMIN_PRODI", "Teknik Informatika"),
-  tahunMasuk: numberEnvOrDefault("ADMIN_TAHUN_MASUK", 2024),
-  tahunLulus: numberEnvOrDefault("ADMIN_TAHUN_LULUS", 2024)
+  npp: requiredEnv("ADMIN_NPP", env),
+  email: requiredEnv("ADMIN_EMAIL", env),
+  password: requiredEnv("ADMIN_PASSWORD", env),
+  namaLengkap: requiredEnv("ADMIN_NAME", env),
+  staffCode: requiredEnv("ADMIN_STAFF_CODE", env),
+  prodi: envOrDefault("ADMIN_PRODI", "Teknik Informatika", env),
+  tahunMasuk: numberEnvOrDefault("ADMIN_TAHUN_MASUK", 2024, env),
+  tahunLulus: numberEnvOrDefault("ADMIN_TAHUN_LULUS", 2024, env)
 };
+
+if (!NPP_PATTERN.test(admin.npp)) {
+  throw new Error(`ADMIN_NPP harus ${NPP_DIGIT_LENGTH} digit angka`);
+}
 
 if (admin.password.length < 8) {
   throw new Error("ADMIN_PASSWORD minimal 8 karakter");
@@ -189,61 +197,6 @@ async function findAuthUser(predicate) {
     if (data.users.length < perPage) return null;
     page += 1;
   }
-}
-
-function loadEnvFile(filePath) {
-  if (!fs.existsSync(filePath)) return;
-
-  const lines = fs.readFileSync(filePath, "utf8").split(/\r?\n/);
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-
-    const match = /^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/.exec(trimmed);
-    if (!match) continue;
-
-    const [, key, rawValue] = match;
-    if (process.env[key] !== undefined) continue;
-
-    process.env[key] = stripQuotes(rawValue.trim());
-  }
-}
-
-function stripQuotes(value) {
-  if (
-    (value.startsWith('"') && value.endsWith('"')) ||
-    (value.startsWith("'") && value.endsWith("'"))
-  ) {
-    return value.slice(1, -1);
-  }
-
-  return value;
-}
-
-function requiredEnv(name) {
-  const value = process.env[name]?.trim();
-  if (!value || isPlaceholderValue(value)) {
-    throw new Error(`${name} belum dikonfigurasi`);
-  }
-  return value;
-}
-
-function isPlaceholderValue(value) {
-  const normalized = value.toLowerCase();
-  return normalized.includes("replace-with") || normalized.includes("your-") || normalized.includes("change-this");
-}
-
-function envOrDefault(name, fallback) {
-  return process.env[name]?.trim() || fallback;
-}
-
-function numberEnvOrDefault(name, fallback) {
-  const raw = process.env[name]?.trim();
-  if (!raw) return fallback;
-
-  const value = Number(raw);
-  if (!Number.isInteger(value)) throw new Error(`${name} harus angka bulat`);
-  return value;
 }
 
 function compactPayload(payload) {

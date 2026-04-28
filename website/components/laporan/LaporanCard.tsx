@@ -30,8 +30,8 @@ export function LaporanCard({
             <Badge variant="success">Excel</Badge>
           </div>
         </div>
-        <h3 className="font-heading text-lg font-semibold text-slate-950">{title}</h3>
-        <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
+        <h3 className="font-heading text-lg font-semibold leading-7 text-slate-950">{title}</h3>
+        <p className="mt-2 text-[15px] leading-6 text-slate-600">{description}</p>
       </Card>
     </button>
   );

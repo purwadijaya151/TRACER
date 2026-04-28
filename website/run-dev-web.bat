@@ -4,7 +4,7 @@ setlocal
 cd /d "%~dp0"
 
 set "PORT=%~1"
-if "%PORT%"=="" set "PORT=3000"
+if "%PORT%"=="" set "PORT=3002"
 
 if not exist "package.json" (
   echo package.json tidak ditemukan. Jalankan script ini dari folder website.
@@ -21,7 +21,7 @@ if not exist "node_modules" (
   )
 )
 
-echo Menjalankan TracerStudy Admin di http://localhost:%PORT%
-npm run dev -- -p %PORT%
+echo Menjalankan TracerStudy Admin di http://127.0.0.1:%PORT%
+npm.cmd run dev -- --port %PORT%
 
 endlocal

@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  rpc: vi.fn()
+  rpc: vi.fn(),
+  from: vi.fn()
 }));
 
 vi.mock("@/lib/actions/_utils", () => ({
@@ -10,15 +11,29 @@ vi.mock("@/lib/actions/_utils", () => ({
     user: { id: "admin-1" },
     adminClient: {
       rpc: mocks.rpc,
-      from: vi.fn()
+      from: mocks.from
     }
   })),
   actionData: (data: unknown) => ({ data, error: null }),
   actionError: (message?: string) => ({ data: null, error: message ?? "error" }),
-  getRange: (page: number, pageSize: number) => ({ from: (page - 1) * pageSize, to: page * pageSize - 1 })
+  getRange: (page: number, pageSize: number) => ({ from: (page - 1) * pageSize, to: page * pageSize - 1 }),
+  isMissingFunctionError: (error: { code?: string } | null) => error?.code === "PGRST202",
+  isMissingRelationError: () => false
 }));
 
 import { broadcastNotifikasi, getRecipientCount } from "@/lib/actions/notifikasi.actions";
+
+function countBuilder(count: number) {
+  const query = {
+    select: vi.fn(() => query),
+    eq: vi.fn(() => query),
+    in: vi.fn(() => query),
+    gte: vi.fn(() => query),
+    lte: vi.fn(() => query),
+    then: (resolve: (value: unknown) => unknown) => Promise.resolve(resolve({ count, error: null }))
+  };
+  return query;
+}
 
 describe("notifikasi actions", () => {
   beforeEach(() => {
@@ -41,6 +56,25 @@ describe("notifikasi actions", () => {
       p_tahun_mulai: null,
       p_tahun_akhir: null
     });
+  });
+
+  it("fallback recipient count uses exact counts without loading a capped submitted ID page", async () => {
+    const totalAlumni = countBuilder(12_000);
+    const submittedAlumni = countBuilder(7_000);
+    mocks.rpc.mockResolvedValueOnce({ data: null, error: { code: "PGRST202" } });
+    mocks.from.mockImplementation((table: string) => table === "alumni" ? totalAlumni : submittedAlumni);
+
+    const result = await getRecipientCount({
+      title: "Pengingat",
+      body: "Mohon isi tracer study",
+      target: "belum_mengisi"
+    });
+
+    expect(result.data).toBe(5_000);
+    expect(submittedAlumni.select).toHaveBeenCalledWith(
+      "alumni_id, alumni!inner(is_admin)",
+      { count: "exact", head: true }
+    );
   });
 
   it("broadcasts notifications through one atomic RPC", async () => {

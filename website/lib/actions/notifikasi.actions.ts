@@ -8,6 +8,7 @@ import {
   isMissingRelationError,
   requireAdmin
 } from "@/lib/actions/_utils";
+import { buildIlikeOrFilter } from "@/lib/postgrest";
 import { notificationSchema } from "@/lib/validation";
 import type { NotificationBroadcast, NotificationFilters, PaginatedResult } from "@/types";
 
@@ -56,8 +57,8 @@ export async function getNotifications(filters: NotificationFilters = {}, page =
     .range(from, to);
 
   if (filters.search) {
-    const search = `%${filters.search}%`;
-    query = query.or(`title.ilike.${search},body.ilike.${search},target_label.ilike.${search}`);
+    const searchFilter = buildIlikeOrFilter(["title", "body", "target_label"], filters.search);
+    if (searchFilter) query = query.or(searchFilter);
   }
 
   const { data, error, count } = await query;
@@ -176,13 +177,17 @@ async function countRecipientsFromBaseTables(auth: AdminContext, payload: Broadc
   }
 
   if (payload.target === "belum_mengisi") {
-    const { data: submitted } = await auth.adminClient
-      .from("tracer_study")
-      .select("alumni_id")
-      .eq("is_submitted", true)
-      .limit(5000);
-    const submittedIds = (submitted ?? []).map((row) => row.alumni_id).filter(Boolean);
-    if (submittedIds.length > 0) query = query.not("id", "in", `(${submittedIds.join(",")})`);
+    const [totalResult, submittedResult] = await Promise.all([
+      query,
+      auth.adminClient
+        .from("tracer_study")
+        .select("alumni_id, alumni!inner(is_admin)", { count: "exact", head: true })
+        .eq("is_submitted", true)
+        .eq("alumni.is_admin", false)
+    ]);
+
+    if (totalResult.error || submittedResult.error) return actionError<number>("Gagal menghitung penerima");
+    return actionData(Math.max((totalResult.count ?? 0) - (submittedResult.count ?? 0), 0));
   }
 
   const { count, error } = await query;

@@ -1,4 +1,5 @@
 import java.util.Properties
+import org.gradle.api.GradleException
 
 plugins {
     id("com.android.application")
@@ -13,9 +14,22 @@ val localProperties = Properties().apply {
 }
 
 fun localProperty(name: String): String =
-    localProperties.getProperty(name)
-        ?: providers.gradleProperty(name).orNull
+    localProperties.getProperty(name)?.trim()
+        ?: providers.gradleProperty(name).orNull?.trim()
+        ?: providers.environmentVariable(name).orNull?.trim()
         ?: ""
+
+fun requiredLocalProperty(name: String): String =
+    localProperty(name).takeIf { it.isNotBlank() }
+        ?: throw GradleException(
+            "$name wajib diisi di local.properties, Gradle property, atau environment variable sebelum build Android."
+        )
+
+fun String.toBuildConfigString(): String =
+    "\"${replace("\\", "\\\\").replace("\"", "\\\"")}\""
+
+val supabaseUrl = requiredLocalProperty("SUPABASE_URL")
+val supabaseAnonKey = requiredLocalProperty("SUPABASE_ANON_KEY")
 
 android {
     namespace = "com.unihaz.tracerstudy"
@@ -29,8 +43,8 @@ android {
         versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "SUPABASE_URL", "\"${localProperty("SUPABASE_URL")}\"")
-        buildConfigField("String", "SUPABASE_ANON_KEY", "\"${localProperty("SUPABASE_ANON_KEY")}\"")
+        buildConfigField("String", "SUPABASE_URL", supabaseUrl.toBuildConfigString())
+        buildConfigField("String", "SUPABASE_ANON_KEY", supabaseAnonKey.toBuildConfigString())
     }
 
     buildTypes {

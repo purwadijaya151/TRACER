@@ -1,11 +1,13 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   BarChart3,
   Bell,
   ClipboardList,
+  FileQuestion,
   Home,
   LogOut,
   Settings,
@@ -21,6 +23,7 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: Home },
   { href: "/dashboard/alumni", label: "Data Alumni", icon: Users },
   { href: "/dashboard/tracer-study", label: "Tracer Study", icon: ClipboardList },
+  { href: "/dashboard/pertanyaan", label: "Pertanyaan", icon: FileQuestion },
   { href: "/dashboard/notifikasi", label: "Notifikasi", icon: Bell },
   { href: "/dashboard/laporan", label: "Laporan", icon: BarChart3 },
   { href: "/dashboard/pengaturan", label: "Pengaturan", icon: Settings }
@@ -46,13 +49,20 @@ export function Sidebar({
 
   return (
     <aside className="flex h-full flex-col bg-navy text-white">
-      <div className="flex h-20 items-center gap-3 px-6">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/15">
-          <span className="font-heading text-sm font-bold">FT</span>
+      <div className="flex h-20 items-center gap-3 px-5">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white p-1 shadow-soft ring-1 ring-white/30">
+          <Image
+            src="/logo.png"
+            alt="Logo Tracer Study Fakultas Teknik UNIHAZ"
+            width={44}
+            height={44}
+            priority
+            className="h-full w-full object-contain"
+          />
         </div>
         <div className="min-w-0">
-          <p className="font-heading text-lg font-bold leading-tight">TracerStudy</p>
-          <p className="text-[13px] font-semibold uppercase tracking-wider text-white/80">FT UNIHAZ</p>
+          <p className="font-heading text-lg font-semibold leading-6">TracerStudy</p>
+          <p className="text-sm font-medium leading-5 text-white/80">FT UNIHAZ</p>
         </div>
       </div>
 
@@ -67,7 +77,7 @@ export function Sidebar({
               href={item.href}
               onClick={onNavigate}
               className={cn(
-                "flex items-center gap-3 rounded-lg border-l-4 px-4 py-3 text-sm font-semibold transition",
+                "flex items-center gap-3 rounded-lg border-l-4 px-4 py-3 text-[15px] font-medium leading-6 transition",
                 active
                   ? "border-gold bg-white/10 text-gold"
                   : "border-transparent text-white/80 hover:bg-white/5 hover:text-white"
@@ -84,8 +94,8 @@ export function Sidebar({
         <div className="mb-3 flex items-center gap-3 rounded-lg bg-white/5 p-3">
           <Avatar name={adminName} src={adminPhoto} size={36} className="bg-white/15 text-white" />
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">{adminName ?? "Admin FT UNIHAZ"}</p>
-            <p className="text-[13px] text-white/80">Administrator</p>
+            <p className="truncate text-sm font-semibold leading-5">{adminName ?? "Admin FT UNIHAZ"}</p>
+            <p className="text-sm leading-5 text-white/80">Administrator</p>
           </div>
         </div>
         <Button variant="ghost" className="w-full justify-start text-white/85 hover:bg-white/10 hover:text-white" onClick={logout}>

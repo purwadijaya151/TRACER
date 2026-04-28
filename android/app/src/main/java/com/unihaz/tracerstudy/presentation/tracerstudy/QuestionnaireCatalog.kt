@@ -28,6 +28,7 @@ data class TextQuestion(
     override val label: String,
     val inputType: TextQuestionType = TextQuestionType.Text,
     val suffix: String? = null,
+    val multiline: Boolean = false,
     override val required: Boolean = false,
     override val requiredWhen: RequiredWhen? = null
 ) : QuestionnaireQuestion()
@@ -408,7 +409,13 @@ object TracerStudyQuestionnaire {
         )
     )
 
-    fun sectionForStep(step: Int): QuestionnaireSection = sections[(step - 1).coerceIn(0, sections.lastIndex)]
+    fun sectionForStep(
+        step: Int,
+        source: List<QuestionnaireSection> = sections
+    ): QuestionnaireSection {
+        val activeSections = source.ifEmpty { sections }
+        return activeSections[(step - 1).coerceIn(0, activeSections.lastIndex)]
+    }
 
     fun isVisible(question: QuestionnaireQuestion, answers: Map<String, String>): Boolean {
         val condition = question.requiredWhen ?: return true
@@ -416,9 +423,9 @@ object TracerStudyQuestionnaire {
     }
 
     fun isRequired(question: QuestionnaireQuestion, answers: Map<String, String>): Boolean {
-        if (question.required) return true
-        val condition = question.requiredWhen ?: return false
-        return answers[condition.field] in condition.values
+        val condition = question.requiredWhen
+        if (condition != null && answers[condition.field] !in condition.values) return false
+        return question.required || condition != null
     }
 
     fun missingRequiredQuestion(section: QuestionnaireSection, answers: Map<String, String>): String? {

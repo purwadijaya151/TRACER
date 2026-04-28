@@ -111,12 +111,12 @@ export function AlumniTable({
   const table = useReactTable({ data: rows, columns, getCoreRowModel: getCoreRowModel() });
 
   return (
-    <Table>
+    <Table className="min-w-[960px]">
       <thead>
         {table.getHeaderGroups().map((headerGroup) => (
           <tr key={headerGroup.id}>
             {headerGroup.headers.map((header) => (
-              <Th key={header.id}>
+              <Th key={header.id} className={alumniColumnClass(header.column.id)}>
                 {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
               </Th>
             ))}
@@ -136,11 +136,27 @@ export function AlumniTable({
               onClick={() => onDetail(row.original)}
             >
               {row.getVisibleCells().map((cell) => (
-                <Td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</Td>
+                <Td key={cell.id} className={alumniColumnClass(cell.column.id)}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</Td>
               ))}
             </tr>
           ))}
       </tbody>
     </Table>
   );
+}
+
+function alumniColumnClass(columnId: string) {
+  const classes: Record<string, string> = {
+    select: "w-12",
+    no: "w-14 whitespace-nowrap",
+    avatar: "w-20",
+    nim: "w-32 whitespace-nowrap",
+    nama_lengkap: "min-w-[160px]",
+    prodi: "w-44",
+    tahun_lulus: "w-20 whitespace-nowrap",
+    status: "w-36",
+    actions: "w-28 whitespace-nowrap"
+  };
+
+  return classes[columnId];
 }

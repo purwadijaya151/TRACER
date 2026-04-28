@@ -26,6 +26,7 @@ class QuestionnaireStepFragment : Fragment() {
     private var content: LinearLayout? = null
     private var lastRenderedAnswers: Map<String, String>? = null
     private var lastRenderedConfirmed: Boolean? = null
+    private var lastRenderedSectionSignature: String? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         val context = requireContext()
@@ -47,7 +48,9 @@ class QuestionnaireStepFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         viewModel.state.observe(viewLifecycleOwner) { state ->
+            val sectionSignature = sectionSignature(state)
             val shouldRender = lastRenderedAnswers == null ||
+                lastRenderedSectionSignature != sectionSignature ||
                 (view.findFocus() !is TextInputEditText &&
                     (lastRenderedAnswers != state.tracerStudy.answers || lastRenderedConfirmed != state.confirmed))
             if (shouldRender) render(state)
@@ -55,7 +58,7 @@ class QuestionnaireStepFragment : Fragment() {
     }
 
     private fun render(state: WizardState) {
-        val section = TracerStudyQuestionnaire.sectionForStep(step)
+        val section = TracerStudyQuestionnaire.sectionForStep(step, state.sections)
         val answers = state.tracerStudy.answers
         val container = content ?: return
         container.removeAllViews()
@@ -65,11 +68,12 @@ class QuestionnaireStepFragment : Fragment() {
             .forEach { question ->
                 container.addView(questionView(question, answers))
             }
-        if (step == TracerStudyQuestionnaire.sections.size) {
+        if (step == state.sections.size) {
             container.addView(confirmView(state.confirmed))
         }
         lastRenderedAnswers = answers.toMap()
         lastRenderedConfirmed = state.confirmed
+        lastRenderedSectionSignature = sectionSignature(state)
     }
 
     private fun questionView(question: QuestionnaireQuestion, answers: Map<String, String>): View {
@@ -84,23 +88,38 @@ class QuestionnaireStepFragment : Fragment() {
 
     private fun textQuestionView(question: TextQuestion, answers: Map<String, String>): View {
         val context = requireContext()
+        val wrapper = blockWrapper()
+        wrapper.addView(labelView(requiredLabel(question)))
         val layout = TextInputLayout(context).apply {
-            hint = requiredLabel(question)
-            layoutParams = blockParams()
+            hint = question.suffix?.takeIf { it.isNotBlank() }?.let { "Isi dalam $it" } ?: "Isi jawaban"
+            suffixText = question.suffix
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
         }
         val input = TextInputEditText(context).apply {
             setText(answers[question.id].orEmpty())
             inputType = when (question.inputType) {
                 TextQuestionType.Number -> InputType.TYPE_CLASS_NUMBER
                 TextQuestionType.Date -> InputType.TYPE_CLASS_DATETIME or InputType.TYPE_DATETIME_VARIATION_DATE
-                TextQuestionType.Text -> InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+                TextQuestionType.Text -> {
+                    if (question.multiline) {
+                        InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or InputType.TYPE_TEXT_FLAG_MULTI_LINE
+                    } else {
+                        InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+                    }
+                }
             }
+            maxLines = if (question.multiline) 6 else 1
+            minLines = if (question.multiline) 3 else 1
             doAfterTextChanged { editable ->
                 viewModel.updateAnswer(question.id, editable?.toString())
             }
         }
         layout.addView(input)
-        return layout
+        wrapper.addView(layout)
+        return wrapper
     }
 
     private fun singleChoiceView(question: SingleChoiceQuestion, answers: Map<String, String>): View {
@@ -123,9 +142,7 @@ class QuestionnaireStepFragment : Fragment() {
         }
         group.setOnCheckedChangeListener { _, checkedId ->
             viewModel.updateAnswer(question.id, idToValue[checkedId])
-            if (question.otherField != null || question.id in rerenderTriggers) {
-                render(viewModel.state.value ?: WizardState())
-            }
+            render(viewModel.state.value ?: WizardState())
         }
         wrapper.addView(group)
         return wrapper
@@ -142,9 +159,7 @@ class QuestionnaireStepFragment : Fragment() {
                 isChecked = answers[option.field] == option.value
                 setOnCheckedChangeListener { _, checked ->
                     viewModel.updateAnswer(option.field, if (checked) option.value else null)
-                    if (option.field in rerenderTriggers || question.otherField != null) {
-                        render(viewModel.state.value ?: WizardState())
-                    }
+                    render(viewModel.state.value ?: WizardState())
                 }
             })
         }
@@ -267,9 +282,13 @@ class QuestionnaireStepFragment : Fragment() {
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
+    private fun sectionSignature(state: WizardState): String {
+        val section = TracerStudyQuestionnaire.sectionForStep(step, state.sections)
+        return "${section.id}:${section.title}:${section.questions.joinToString(",") { it.id }}"
+    }
+
     companion object {
         private const val ARG_STEP = "step"
-        private val rerenderTriggers = setOf("f8", "f1101", "f301", "f1001", "f1613")
 
         fun newInstance(step: Int): QuestionnaireStepFragment =
             QuestionnaireStepFragment().apply {

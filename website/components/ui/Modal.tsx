@@ -45,7 +45,7 @@ export function Modal({
         </TransitionChild>
 
         <div className="fixed inset-0 overflow-y-auto p-4">
-          <div className="flex min-h-full items-center justify-center">
+          <div className="flex min-h-full items-start justify-center py-4 sm:items-center">
             <TransitionChild
               as={Fragment}
               enter="ease-out duration-150"
@@ -58,12 +58,12 @@ export function Modal({
               <DialogPanel
                 data-testid="modal-panel"
                 className={cn(
-                  "w-full rounded-lg bg-white shadow-overlay transition-all",
+                  "flex max-h-[calc(100vh-2rem)] w-full flex-col overflow-hidden rounded-lg bg-white shadow-overlay ring-1 ring-black/5 transition-all",
                   sizes[size]
                 )}
               >
-                <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-                  <DialogTitle className="font-heading text-lg font-semibold text-slate-950">
+                <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-5 py-4">
+                  <DialogTitle className="font-heading text-xl font-semibold leading-7 text-slate-950">
                     {title}
                   </DialogTitle>
                   <button
@@ -75,8 +75,8 @@ export function Modal({
                     <X className="h-4 w-4" />
                   </button>
                 </div>
-                <div className="p-5">{children}</div>
-                {footer ? <div className="border-t border-slate-100 px-5 py-4">{footer}</div> : null}
+                <div className="min-h-0 overflow-y-auto p-5">{children}</div>
+                {footer ? <div className="shrink-0 border-t border-slate-100 bg-white px-5 py-4">{footer}</div> : null}
               </DialogPanel>
             </TransitionChild>
           </div>

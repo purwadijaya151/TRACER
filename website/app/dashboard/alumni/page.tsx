@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { Download, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, Download, Plus, Trash2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { AlumniDetailModal } from "@/components/alumni/AlumniDetailModal";
@@ -19,6 +19,7 @@ import { useAlumni } from "@/lib/hooks/useAlumni";
 import type { Alumni, AlumniFilters, ReportData } from "@/types";
 
 const pageSize = 10;
+const LARGE_EXPORT_THRESHOLD = 1000;
 
 function AlumniPageContent() {
   const searchParams = useSearchParams();
@@ -52,6 +53,8 @@ function AlumniPageContent() {
   );
   const { data, loading, refresh } = useAlumni(filters, page, pageSize);
   const rows = data?.rows ?? [];
+  const totalRows = data?.total ?? 0;
+  const isLargeExport = totalRows > LARGE_EXPORT_THRESHOLD;
 
   const confirmDelete = async () => {
     if (!deleting) return;
@@ -79,21 +82,30 @@ function AlumniPageContent() {
 
   const runExport = async (format: "pdf" | "excel") => {
     setExporting(true);
-    const result = await getAlumniExport(filters);
-    setExporting(false);
-
-    if (result.error || !result.data) {
-      toast.error(result.error ?? "Gagal export alumni");
-      return;
+    if (isLargeExport) {
+      toast.info(`Menyiapkan ${totalRows.toLocaleString("id-ID")} data alumni. Proses export bisa lebih lama.`);
     }
 
-    const reportData: ReportData = { type: "alumni", rows: result.data };
-    if (format === "pdf") {
-      const { exportPDF } = await import("@/lib/export/exportPDF");
-      exportPDF(reportData, "Laporan Data Alumni", filters);
-    } else {
-      const { exportExcel } = await import("@/lib/export/exportExcel");
-      exportExcel(reportData, "laporan-data-alumni");
+    try {
+      const result = await getAlumniExport(filters);
+
+      if (result.error || !result.data) {
+        toast.error(result.error ?? "Gagal export alumni");
+        return;
+      }
+
+      const reportData: ReportData = { type: "alumni", rows: result.data };
+      if (format === "pdf") {
+        const { exportPDF } = await import("@/lib/export/exportPDF");
+        exportPDF(reportData, "Laporan Data Alumni", filters);
+      } else {
+        const { exportExcel } = await import("@/lib/export/exportExcel");
+        exportExcel(reportData, "laporan-data-alumni");
+      }
+    } catch {
+      toast.error("Gagal membuat file export alumni");
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -104,7 +116,7 @@ function AlumniPageContent() {
           title="Data Alumni"
           description="Kelola data alumni dan status pengisian tracer study."
           action={
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2 sm:justify-end">
               <Button variant="secondary" loading={exporting} onClick={() => runExport("pdf")}><Download className="h-4 w-4" /> PDF</Button>
               <Button variant="secondary" loading={exporting} onClick={() => runExport("excel")}><Download className="h-4 w-4" /> Excel</Button>
               <Button onClick={() => { setEditing(null); setModalOpen(true); }}>
@@ -134,6 +146,13 @@ function AlumniPageContent() {
               <Button variant="danger" size="sm" onClick={confirmBulkDelete}>
                 <Trash2 className="h-4 w-4" /> Hapus Terpilih
               </Button>
+            </div>
+          ) : null}
+
+          {isLargeExport ? (
+            <div className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-800">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>Export akan mencakup {totalRows.toLocaleString("id-ID")} alumni sesuai filter aktif. Proses file bisa lebih lama.</span>
             </div>
           ) : null}
 

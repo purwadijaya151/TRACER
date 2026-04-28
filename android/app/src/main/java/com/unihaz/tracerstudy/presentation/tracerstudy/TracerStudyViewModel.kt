@@ -16,6 +16,8 @@ import kotlinx.coroutines.launch
 
 data class WizardState(
     val currentStep: Int = 1,
+    val sections: List<QuestionnaireSection> = TracerStudyQuestionnaire.sections,
+    val questionnaireVersion: String = TracerStudyQuestionnaire.VERSION,
     val tracerStudy: TracerStudy = TracerStudy(),
     val alumni: Alumni? = null,
     val confirmed: Boolean = false,
@@ -57,8 +59,8 @@ class TracerStudyViewModel(
             answers[field] = normalized
         }
         val tracer = current.tracerStudy
-            .copy(questionnaireVersion = TracerStudyQuestionnaire.VERSION, answers = answers)
-            .withLegacyFields()
+            .copy(questionnaireVersion = current.questionnaireVersion, answers = answers)
+            .withLegacyFields(current.questionnaireVersion)
         _state.value = current.copy(tracerStudy = tracer, error = null)
     }
 
@@ -84,7 +86,7 @@ class TracerStudyViewModel(
             return
         }
         autoSave(current.tracerStudy)
-        val next = (current.currentStep + 1).coerceAtMost(TracerStudyQuestionnaire.sections.size)
+        val next = (current.currentStep + 1).coerceAtMost(current.sections.size)
         _state.value = current.copy(currentStep = next, error = null)
     }
 
@@ -102,7 +104,7 @@ class TracerStudyViewModel(
         }
         val alumniId = sessionManager?.getSession()?.alumniId.orEmpty()
         val tracer = current.tracerStudy.copy(alumniId = alumniId.ifBlank { current.tracerStudy.alumniId })
-        validateSubmit(tracer)?.let { error ->
+        validateSubmit(current, tracer)?.let { error ->
             _state.value = current.copy(error = error)
             return
         }
@@ -118,14 +120,14 @@ class TracerStudyViewModel(
     }
 
     private fun validateStep(state: WizardState): String? {
-        val section = TracerStudyQuestionnaire.sectionForStep(state.currentStep)
+        val section = TracerStudyQuestionnaire.sectionForStep(state.currentStep, state.sections)
         return TracerStudyQuestionnaire.missingRequiredQuestion(section, state.tracerStudy.answers)
             ?.let { "$it wajib diisi" }
     }
 
-    private fun validateSubmit(tracer: TracerStudy): String? {
+    private fun validateSubmit(state: WizardState, tracer: TracerStudy): String? {
         if (tracer.alumniId.isBlank()) return "Sesi login tidak ditemukan"
-        TracerStudyQuestionnaire.sections.forEach { section ->
+        state.sections.forEach { section ->
             TracerStudyQuestionnaire.missingRequiredQuestion(section, tracer.answers)
                 ?.let { return "$it wajib diisi" }
         }
@@ -147,26 +149,46 @@ class TracerStudyViewModel(
         if (getProfile == null && repository == null) return
         viewModelScope.launch {
             val profileResult = getProfile?.invoke(alumniId)
+            val questionResult = repository?.getQuestionnaireQuestions(TracerStudyQuestionnaire.VERSION)
             val draftResult = repository?.getDraft(alumniId)
             val current = _state.value ?: WizardState()
+            val remoteSections = (questionResult as? NetworkResult.Success)
+                ?.data
+                ?.let(RemoteQuestionnaireMapper::toSections)
+                .orEmpty()
+            val sections = remoteSections.ifEmpty { current.sections.ifEmpty { TracerStudyQuestionnaire.sections } }
+            val questionnaireError = when (questionResult) {
+                is NetworkResult.Error -> "Gagal memuat pertanyaan terbaru: ${questionResult.message}"
+                is NetworkResult.Success -> when {
+                    questionResult.data.isEmpty() -> "Belum ada pertanyaan aktif dari admin, menggunakan kuesioner bawaan"
+                    remoteSections.isEmpty() -> "Konfigurasi pertanyaan dari admin tidak valid, menggunakan kuesioner bawaan"
+                    else -> null
+                }
+                NetworkResult.Loading -> null
+                null -> null
+            }
             val draft = (draftResult as? NetworkResult.Success)?.data
             val defaultTracer = WizardState().tracerStudy
             val tracerStudy = when {
                 draft != null && current.tracerStudy == defaultTracer -> draft
                 current.tracerStudy.alumniId.isBlank() -> current.tracerStudy.copy(alumniId = alumniId)
                 else -> current.tracerStudy
-            }.withSeededAnswers().withLegacyFields()
+            }.withSeededAnswers(TracerStudyQuestionnaire.VERSION).withLegacyFields(TracerStudyQuestionnaire.VERSION)
             _state.value = current.copy(
+                currentStep = current.currentStep.coerceIn(1, sections.size),
+                sections = sections,
+                questionnaireVersion = TracerStudyQuestionnaire.VERSION,
                 alumni = (profileResult as? NetworkResult.Success)?.data ?: current.alumni,
                 tracerStudy = tracerStudy,
                 submitted = draft?.isSubmitted == true || current.submitted,
                 error = (profileResult as? NetworkResult.Error)?.message
+                    ?: questionnaireError
                     ?: (draftResult as? NetworkResult.Error)?.message
             )
         }
     }
 
-    private fun TracerStudy.withSeededAnswers(): TracerStudy {
+    private fun TracerStudy.withSeededAnswers(version: String): TracerStudy {
         if (answers.isNotEmpty()) return this
         val seeded = mutableMapOf<String, String>()
         seeded["f8"] = when (statusKerja) {
@@ -184,10 +206,10 @@ class TracerStudyViewModel(
         nilaiIt?.let { seeded["f1767"] = it.toString() }
         nilaiSoftSkill?.let { seeded["f1769"] = it.toString() }
         nilaiKepemimpinan?.let { seeded["f1771"] = it.toString() }
-        return copy(questionnaireVersion = TracerStudyQuestionnaire.VERSION, answers = seeded)
+        return copy(questionnaireVersion = version, answers = seeded)
     }
 
-    private fun TracerStudy.withLegacyFields(): TracerStudy {
+    private fun TracerStudy.withLegacyFields(version: String): TracerStudy {
         val mappedStatus = when (answers["f8"]) {
             "1" -> "Bekerja"
             "3" -> "Wirausaha"
@@ -195,7 +217,7 @@ class TracerStudyViewModel(
             else -> "Belum Bekerja"
         }
         return copy(
-            questionnaireVersion = TracerStudyQuestionnaire.VERSION,
+            questionnaireVersion = version,
             statusKerja = mappedStatus,
             namaPerusahaan = answers["f5b"],
             jabatan = answers["f5c"],

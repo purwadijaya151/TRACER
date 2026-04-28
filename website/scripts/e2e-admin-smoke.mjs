@@ -1,44 +1,34 @@
 import fs from "node:fs";
-import { spawn } from "node:child_process";
-import { setTimeout as delay } from "node:timers/promises";
 import { chromium } from "playwright";
+import { getAppDir, loadEnvFiles, requiredEnv } from "./lib/env.mjs";
+import { ensureDevServer, stopDevServer } from "./lib/next-dev-server.mjs";
 
-const appDir = new URL("..", import.meta.url);
-loadEnvFile(new URL(".env.local", appDir));
+const appPath = getAppDir(import.meta.url);
+const env = loadEnvFiles(appPath);
 
-const baseUrl = process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000";
-const adminNpp = requiredEnv("ADMIN_NPP");
-const adminPassword = requiredEnv("ADMIN_PASSWORD");
-const edgePath = process.env.E2E_EDGE_PATH ?? "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
+const baseUrl = env.E2E_BASE_URL ?? "http://127.0.0.1:3000";
+const adminNpp = requiredEnv("ADMIN_NPP", env);
+const adminPassword = requiredEnv("ADMIN_PASSWORD", env);
+const edgePath = env.E2E_EDGE_PATH ?? "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
 const routes = [
   "dashboard",
   "dashboard/alumni",
   "dashboard/tracer-study",
+  "dashboard/pertanyaan",
   "dashboard/notifikasi",
   "dashboard/laporan",
   "dashboard/pengaturan"
 ];
 
-const mobileRoutes = ["dashboard", "dashboard/tracer-study", "dashboard/laporan"];
+const mobileRoutes = routes;
 let devServer;
 
 try {
-  const alreadyRunning = await isServerReady();
-  if (!alreadyRunning) {
-    devServer = spawn("npm.cmd", ["run", "dev", "--", "--hostname", "127.0.0.1", "--port", "3000"], {
-      cwd: appDir,
-      env: process.env,
-      shell: false,
-      stdio: "ignore",
-      windowsHide: true
-    });
-    await waitForServer();
-  }
-
+  devServer = await ensureDevServer({ baseUrl, appPath });
   const result = await runSmoke();
   console.log(JSON.stringify(result, null, 2));
 } finally {
-  if (devServer) devServer.kill();
+  if (devServer) stopDevServer(devServer);
 }
 
 async function runSmoke() {
@@ -54,13 +44,12 @@ async function runSmoke() {
     if (response.status() === 404 && !url.endsWith("/favicon.ico")) notFound.push(url);
   });
 
-  const loginResponse = await page.goto(`${baseUrl}/login`, { waitUntil: "networkidle" });
+  const loginResponse = await gotoAppPage(page, "login");
   await page.getByLabel("NPP Admin").fill(adminNpp);
   await page.getByLabel("Password").fill(adminPassword);
-  await Promise.all([
-    page.waitForURL(/\/dashboard(?:$|\?)/, { timeout: 30_000 }),
-    page.getByRole("button", { name: "Masuk" }).click()
-  ]);
+  await page.getByRole("button", { name: "Masuk" }).click();
+  await page.waitForFunction(() => window.location.pathname.startsWith("/dashboard"), null, { timeout: 30_000 });
+  await page.waitForLoadState("networkidle", { timeout: 5_000 }).catch(() => null);
 
   const desktop = [];
   for (const route of routes) desktop.push(await pageMetrics(page, route, "desktop"));
@@ -94,7 +83,7 @@ async function runSmoke() {
 }
 
 async function pageMetrics(page, route, viewport) {
-  const response = await page.goto(`${baseUrl}/${route}`, { waitUntil: "networkidle" });
+  const response = await gotoAppPage(page, route);
   await page.waitForTimeout(250);
 
   return page.evaluate(({ route, viewport, status }) => {
@@ -153,6 +142,11 @@ async function modalSmoke(page) {
       button: /Kirim Notifikasi/
     },
     {
+      route: "dashboard/pertanyaan",
+      name: "Tambah Pertanyaan",
+      button: /Tambah Pertanyaan/
+    },
+    {
       route: "dashboard/laporan",
       name: "Generate Laporan",
       button: /Laporan Data Alumni/
@@ -161,7 +155,7 @@ async function modalSmoke(page) {
 
   const results = [];
   for (const check of checks) {
-    await page.goto(`${baseUrl}/${check.route}`, { waitUntil: "networkidle" });
+    await gotoAppPage(page, check.route);
     await page.getByRole("button", { name: check.button }).click();
     await page.waitForSelector('[data-testid="modal-panel"]', { state: "visible", timeout: 10_000 });
     results.push(await modalMetrics(page, check.name));
@@ -169,6 +163,17 @@ async function modalSmoke(page) {
     await page.waitForTimeout(200);
   }
   return results;
+}
+
+async function gotoAppPage(page, route) {
+  const path = route.startsWith("/") ? route : `/${route}`;
+  const response = await page.goto(`${baseUrl}${path}`, {
+    waitUntil: "domcontentloaded",
+    timeout: 30_000
+  });
+
+  await page.waitForLoadState("networkidle", { timeout: 5_000 }).catch(() => null);
+  return response;
 }
 
 async function modalMetrics(page, name) {
@@ -204,49 +209,4 @@ async function modalMetrics(page, name) {
       return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
     }
   }, name);
-}
-
-async function waitForServer() {
-  const deadline = Date.now() + 90_000;
-  while (Date.now() < deadline) {
-    if (await isServerReady()) return;
-    await delay(1_000);
-  }
-  throw new Error(`Dev server tidak siap di ${baseUrl}`);
-}
-
-async function isServerReady() {
-  try {
-    const response = await fetch(`${baseUrl}/login`, { cache: "no-store" });
-    return response.ok;
-  } catch {
-    return false;
-  }
-}
-
-function loadEnvFile(url) {
-  if (!fs.existsSync(url)) return;
-  const lines = fs.readFileSync(url, "utf8").split(/\r?\n/);
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const match = /^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/.exec(trimmed);
-    if (!match) continue;
-    const [, key, rawValue] = match;
-    if (process.env[key] !== undefined) continue;
-    process.env[key] = stripQuotes(rawValue.trim());
-  }
-}
-
-function stripQuotes(value) {
-  if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-    return value.slice(1, -1);
-  }
-  return value;
-}
-
-function requiredEnv(name) {
-  const value = process.env[name]?.trim();
-  if (!value) throw new Error(`${name} belum dikonfigurasi`);
-  return value;
 }

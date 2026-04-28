@@ -1,4 +1,4 @@
-import type { NotifTarget, Prodi, RentangGaji, StatusKerja, WaktuTunggu } from "@/types";
+import type { NotifTarget, Prodi, QuestionType, RentangGaji, StatusKerja, WaktuTunggu } from "@/types";
 
 export const PRODI_OPTIONS: Prodi[] = [
   "Teknik Mesin",
@@ -26,6 +26,32 @@ export const WAKTU_TUNGGU_OPTIONS: WaktuTunggu[] = [
   "Lebih dari 6 bulan"
 ];
 
+export const NPP_DIGIT_LENGTH = 18;
+export const NPP_EXAMPLE = "198001012024011001";
+export const NPP_REGEX = /^\d{18}$/;
+export const QUESTIONNAIRE_DEFAULT_VERSION = "launch-v1";
+export const QUESTION_TYPE_OPTIONS: QuestionType[] = [
+  "text",
+  "textarea",
+  "number",
+  "date",
+  "single_choice",
+  "multi_choice",
+  "scale",
+  "matrix_pair"
+];
+
+export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
+  text: "Teks Pendek",
+  textarea: "Teks Panjang",
+  number: "Angka",
+  date: "Tanggal",
+  single_choice: "Pilihan Tunggal",
+  multi_choice: "Pilihan Ganda",
+  scale: "Skala",
+  matrix_pair: "Matriks Pasangan"
+};
+
 export const NOTIF_TARGET_LABELS: Record<NotifTarget, string> = {
   all: "Semua Alumni",
   prodi: "Per Prodi",
@@ -37,6 +63,7 @@ export const PAGE_TITLES: Record<string, string> = {
   "/dashboard": "Dashboard",
   "/dashboard/alumni": "Data Alumni",
   "/dashboard/tracer-study": "Tracer Study",
+  "/dashboard/pertanyaan": "Pertanyaan",
   "/dashboard/notifikasi": "Notifikasi",
   "/dashboard/laporan": "Laporan",
   "/dashboard/pengaturan": "Pengaturan"

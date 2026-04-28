@@ -62,7 +62,7 @@ export function TracerStudyTable({
   });
 
   return (
-    <Table>
+    <Table className="min-w-[1040px]">
       <thead>
         {table.getHeaderGroups().map((group) => (
           <tr key={group.id}>

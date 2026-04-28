@@ -76,6 +76,22 @@ export async function updateAdminProfile(input: unknown) {
   const parsed = profileSchema.safeParse(input);
   if (!parsed.success) return actionError<Alumni>("Profil admin tidak valid");
 
+  let previousAuthEmail: string | null = null;
+  let authEmailChanged = false;
+
+  if (auth.user.email !== parsed.data.email) {
+    const { data: authUser, error: authUserError } = await auth.adminClient.auth.admin.getUserById(auth.user.id);
+    if (authUserError || !authUser.user) return actionError<Alumni>("Gagal memvalidasi akun Auth admin");
+
+    previousAuthEmail = authUser.user.email ?? auth.user.email ?? null;
+    const { error: authUpdateError } = await auth.adminClient.auth.admin.updateUserById(auth.user.id, {
+      email: parsed.data.email,
+      email_confirm: true
+    });
+    if (authUpdateError) return actionError<Alumni>("Email Auth admin gagal diperbarui");
+    authEmailChanged = true;
+  }
+
   const { data, error } = await auth.adminClient
     .from("alumni")
     .update({
@@ -88,10 +104,14 @@ export async function updateAdminProfile(input: unknown) {
     .select()
     .single();
 
-  if (error) return actionError<Alumni>("Gagal memperbarui profil");
-
-  if (auth.user.email !== parsed.data.email) {
-    await auth.adminClient.auth.admin.updateUserById(auth.user.id, { email: parsed.data.email });
+  if (error) {
+    if (authEmailChanged && previousAuthEmail) {
+      await auth.adminClient.auth.admin.updateUserById(auth.user.id, {
+        email: previousAuthEmail,
+        email_confirm: true
+      });
+    }
+    return actionError<Alumni>("Gagal memperbarui profil");
   }
 
   return actionData(data as Alumni);

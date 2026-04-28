@@ -2,13 +2,13 @@
 
 Login admin web sekarang menggunakan NPP dan password.
 
-NPP khusus akun admin/staff kampus. Mahasiswa/alumni memakai NPM pada aplikasi Android dan data alumni.
+NPP khusus akun admin/staff kampus memakai format asli 18 digit angka. Mahasiswa/alumni memakai NPM pada aplikasi Android dan data alumni.
 
-Local seed aktif:
+Konfigurasi seed lokal:
 
-- NPP: `198001012024011001`
+- NPP: disimpan di `website/.env.local` sebagai `ADMIN_NPP`
 - Password: disimpan di `website/.env.local` sebagai `ADMIN_PASSWORD` dan tidak dicatat di repo
-- Email Auth internal: `admin@unihaz.ac.id`
+- Email Auth internal: disimpan di `website/.env.local` sebagai `ADMIN_EMAIL`
 
 Cara membuat atau memperbarui akun admin di Supabase:
 

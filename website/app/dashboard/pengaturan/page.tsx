@@ -122,7 +122,7 @@ export default function PengaturanPage() {
         <CardContent className="space-y-6">
           <div className="flex items-center gap-4">
             <Avatar name={profileForm.watch("nama_lengkap")} src={avatarUrl} size={64} />
-            <label className="focus-ring inline-flex cursor-pointer items-center gap-2 rounded-md border border-navy px-4 py-2 text-sm font-semibold text-navy hover:bg-navy-50">
+            <label className="focus-ring inline-flex cursor-pointer items-center gap-2 rounded-md border border-navy px-4 py-2 text-sm font-semibold leading-5 text-navy hover:bg-navy-50">
               <Upload className="h-4 w-4" />
               Upload Avatar
               <input
@@ -146,7 +146,7 @@ export default function PengaturanPage() {
           </form>
 
           <div className="border-t border-slate-100 pt-6">
-            <h3 className="font-heading text-base font-semibold text-slate-950">Ganti Password</h3>
+            <h3 className="font-heading text-lg font-semibold leading-7 text-slate-950">Ganti Password</h3>
             <form className="mt-4 space-y-4" onSubmit={passwordForm.handleSubmit(submitPassword)}>
               <Input label="Password Lama" type="password" error={passwordForm.formState.errors.oldPassword?.message} {...passwordForm.register("oldPassword")} />
               <Input label="Password Baru" type="password" error={passwordForm.formState.errors.newPassword?.message} {...passwordForm.register("newPassword")} />

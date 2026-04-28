@@ -9,9 +9,31 @@ import {
   requireAdmin,
   sanitizeText
 } from "@/lib/actions/_utils";
+import { buildIlikeOrFilter } from "@/lib/postgrest";
 import type { Alumni, AlumniFilters, PaginatedResult, TracerStudy } from "@/types";
 
 type AdminContext = Extract<Awaited<ReturnType<typeof requireAdmin>>, { ok: true }>;
+const ALUMNI_EXPORT_BATCH_SIZE = 1000;
+
+type AlumniQueryResult<T> = {
+  data: T[] | null;
+  error: { code?: string; message?: string } | null;
+};
+
+async function getAllRows<T>(
+  buildQuery: (from: number, to: number) => PromiseLike<AlumniQueryResult<T>>
+) {
+  const rows: T[] = [];
+
+  for (let from = 0; ; from += ALUMNI_EXPORT_BATCH_SIZE) {
+    const { data, error } = await buildQuery(from, from + ALUMNI_EXPORT_BATCH_SIZE - 1);
+    if (error) return { ok: false as const, error };
+
+    const batch = data ?? [];
+    rows.push(...batch);
+    if (batch.length < ALUMNI_EXPORT_BATCH_SIZE) return { ok: true as const, rows };
+  }
+}
 
 function normalizeAlumniPayload(payload: Record<string, unknown>) {
   return {
@@ -60,8 +82,8 @@ export async function getAlumni(filters: AlumniFilters = {}, page = 1, pageSize 
     .range(from, to);
 
   if (filters.search) {
-    const search = `%${filters.search}%`;
-    query = query.or(`nim.ilike.${search},nama_lengkap.ilike.${search},email.ilike.${search}`);
+    const searchFilter = buildIlikeOrFilter(["nim", "nama_lengkap", "email"], filters.search);
+    if (searchFilter) query = query.or(searchFilter);
   }
   if (filters.prodi && filters.prodi !== "all") query = query.eq("prodi", filters.prodi);
   if (filters.tahun_lulus && filters.tahun_lulus !== "all") query = query.eq("tahun_lulus", filters.tahun_lulus);
@@ -94,30 +116,32 @@ export async function getAlumniExport(filters: AlumniFilters = {}) {
   const auth = await requireAdmin();
   if (!auth.ok) return actionError<Alumni[]>(auth.error);
 
-  let query = auth.adminClient
-    .from("admin_alumni_with_status")
-    .select("*")
-    .eq("is_admin", false)
-    .order("tahun_lulus", { ascending: false })
-    .order("nama_lengkap", { ascending: true })
-    .limit(5000);
+  const result = await getAllRows<Alumni & { tracer_submitted?: boolean }>((from, to) => {
+    let query = auth.adminClient
+      .from("admin_alumni_with_status")
+      .select("*")
+      .eq("is_admin", false)
+      .order("tahun_lulus", { ascending: false })
+      .order("nama_lengkap", { ascending: true })
+      .range(from, to);
 
-  if (filters.search) {
-    const search = `%${filters.search}%`;
-    query = query.or(`nim.ilike.${search},nama_lengkap.ilike.${search},email.ilike.${search}`);
-  }
-  if (filters.prodi && filters.prodi !== "all") query = query.eq("prodi", filters.prodi);
-  if (filters.tahun_lulus && filters.tahun_lulus !== "all") query = query.eq("tahun_lulus", filters.tahun_lulus);
-  if (filters.status === "sudah") query = query.eq("tracer_submitted", true);
-  if (filters.status === "belum") query = query.eq("tracer_submitted", false);
+    if (filters.search) {
+      const searchFilter = buildIlikeOrFilter(["nim", "nama_lengkap", "email"], filters.search);
+      if (searchFilter) query = query.or(searchFilter);
+    }
+    if (filters.prodi && filters.prodi !== "all") query = query.eq("prodi", filters.prodi);
+    if (filters.tahun_lulus && filters.tahun_lulus !== "all") query = query.eq("tahun_lulus", filters.tahun_lulus);
+    if (filters.status === "sudah") query = query.eq("tracer_submitted", true);
+    if (filters.status === "belum") query = query.eq("tracer_submitted", false);
+    return query;
+  });
 
-  const { data, error } = await query;
-  if (error) {
-    if (isMissingRelationError(error)) return getAlumniExportFromBaseTable(auth, filters);
+  if (!result.ok) {
+    if (isMissingRelationError(result.error)) return getAlumniExportFromBaseTable(auth, filters);
     return actionError<Alumni[]>("Gagal mengambil data alumni");
   }
 
-  const rows = ((data ?? []) as Array<Alumni & { tracer_submitted?: boolean }>).map((row) => {
+  const rows = result.rows.map((row) => {
     const { tracer_submitted: tracerSubmitted, ...alumni } = row;
     return {
       ...alumni,
@@ -153,26 +177,28 @@ async function getAlumniExportFromBaseTable(auth: AdminContext, filters: AlumniF
 }
 
 async function getFilteredAlumniRows(auth: AdminContext, filters: AlumniFilters) {
-  let query = auth.adminClient
-    .from("alumni")
-    .select("*")
-    .eq("is_admin", false)
-    .order("created_at", { ascending: false })
-    .limit(5000);
+  const result = await getAllRows<Alumni>((from, to) => {
+    let query = auth.adminClient
+      .from("alumni")
+      .select("*")
+      .eq("is_admin", false)
+      .order("created_at", { ascending: false })
+      .range(from, to);
 
-  if (filters.search) {
-    const search = `%${filters.search}%`;
-    query = query.or(`nim.ilike.${search},nama_lengkap.ilike.${search},email.ilike.${search}`);
-  }
-  if (filters.prodi && filters.prodi !== "all") query = query.eq("prodi", filters.prodi);
-  if (filters.tahun_lulus && filters.tahun_lulus !== "all") query = query.eq("tahun_lulus", filters.tahun_lulus);
+    if (filters.search) {
+      const searchFilter = buildIlikeOrFilter(["nim", "nama_lengkap", "email"], filters.search);
+      if (searchFilter) query = query.or(searchFilter);
+    }
+    if (filters.prodi && filters.prodi !== "all") query = query.eq("prodi", filters.prodi);
+    if (filters.tahun_lulus && filters.tahun_lulus !== "all") query = query.eq("tahun_lulus", filters.tahun_lulus);
+    return query;
+  });
 
-  const { data, error } = await query;
-  if (error) return { ok: false as const, error: "Gagal mengambil data alumni" };
+  if (!result.ok) return { ok: false as const, error: "Gagal mengambil data alumni" };
 
-  const submittedIds = await getSubmittedAlumniIds(auth, (data ?? []).map((row) => row.id as string));
+  const submittedIds = await getSubmittedAlumniIds(auth, result.rows.map((row) => row.id));
   const submittedSet = new Set(submittedIds);
-  const rows = ((data ?? []) as Alumni[])
+  const rows = result.rows
     .filter((row) => {
       if (filters.status === "sudah") return submittedSet.has(row.id);
       if (filters.status === "belum") return !submittedSet.has(row.id);
@@ -189,15 +215,21 @@ async function getFilteredAlumniRows(auth: AdminContext, filters: AlumniFilters)
 async function getSubmittedAlumniIds(auth: AdminContext, alumniIds: string[]) {
   if (alumniIds.length === 0) return [];
 
-  const { data, error } = await auth.adminClient
-    .from("tracer_study")
-    .select("alumni_id")
-    .in("alumni_id", alumniIds)
-    .eq("is_submitted", true)
-    .limit(5000);
+  const submittedIds: string[] = [];
+  for (let index = 0; index < alumniIds.length; index += ALUMNI_EXPORT_BATCH_SIZE) {
+    const chunk = alumniIds.slice(index, index + ALUMNI_EXPORT_BATCH_SIZE);
+    const result = await getAllRows<{ alumni_id: string }>((from, to) => auth.adminClient
+      .from("tracer_study")
+      .select("alumni_id")
+      .in("alumni_id", chunk)
+      .eq("is_submitted", true)
+      .range(from, to));
 
-  if (error) return [];
-  return (data ?? []).map((row) => row.alumni_id as string).filter(Boolean);
+    if (!result.ok) return [];
+    submittedIds.push(...result.rows.map((row) => row.alumni_id).filter(Boolean));
+  }
+
+  return submittedIds;
 }
 
 export async function createAlumni(input: unknown) {
@@ -252,6 +284,24 @@ export async function updateAlumni(id: string, input: unknown) {
   if (!guard.ok) return actionError<Alumni>(guard.error);
 
   const payload = normalizeAlumniPayload(parsed.data);
+  let previousAuthEmail: string | null = null;
+  let authEmailChanged = false;
+
+  if (payload.email) {
+    const { data: authUser, error: authUserError } = await auth.adminClient.auth.admin.getUserById(id);
+    if (authUserError || !authUser.user) return actionError<Alumni>("Gagal memvalidasi akun Auth alumni");
+
+    previousAuthEmail = authUser.user.email ?? null;
+    if (previousAuthEmail !== payload.email) {
+      const { error: authUpdateError } = await auth.adminClient.auth.admin.updateUserById(id, {
+        email: payload.email,
+        email_confirm: true
+      });
+      if (authUpdateError) return actionError<Alumni>("Email Auth alumni gagal diperbarui");
+      authEmailChanged = true;
+    }
+  }
+
   const { data, error } = await auth.adminClient
     .from("alumni")
     .update(payload)
@@ -259,10 +309,14 @@ export async function updateAlumni(id: string, input: unknown) {
     .select()
     .single();
 
-  if (error) return actionError<Alumni>("Gagal memperbarui data alumni");
-
-  if (payload.email) {
-    await auth.adminClient.auth.admin.updateUserById(id, { email: payload.email });
+  if (error) {
+    if (authEmailChanged && previousAuthEmail) {
+      await auth.adminClient.auth.admin.updateUserById(id, {
+        email: previousAuthEmail,
+        email_confirm: true
+      });
+    }
+    return actionError<Alumni>("Gagal memperbarui data alumni");
   }
 
   return actionData(data as Alumni);

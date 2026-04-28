@@ -8,7 +8,7 @@ import type { Alumni } from "@/types";
 function DetailRow({ label, value }: { label: string; value?: React.ReactNode }) {
   return (
     <div>
-      <p className="text-[13px] font-semibold uppercase tracking-wide text-slate-600">{label}</p>
+      <p className="text-sm font-medium leading-5 text-slate-600">{label}</p>
       <p className="mt-1 text-sm leading-6 text-slate-900">{value || "-"}</p>
     </div>
   );

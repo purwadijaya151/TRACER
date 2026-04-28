@@ -22,12 +22,12 @@ export function CardHeader({
   className?: string;
 }) {
   return (
-    <div className={cn("flex items-start justify-between gap-4 border-b border-slate-100 p-5", className)}>
-      <div>
-        <h2 className="font-heading text-lg font-semibold text-slate-950">{title}</h2>
-        {description ? <p className="mt-1 text-sm leading-6 text-slate-600">{description}</p> : null}
+    <div className={cn("flex flex-col gap-4 border-b border-slate-100 p-5 sm:flex-row sm:items-start sm:justify-between", className)}>
+      <div className="min-w-0">
+        <h2 className="font-heading text-[19px] font-semibold leading-7 text-slate-950">{title}</h2>
+        {description ? <p className="mt-1 text-[15px] leading-6 text-slate-600">{description}</p> : null}
       </div>
-      {action ? <div className="shrink-0">{action}</div> : null}
+      {action ? <div className="min-w-0 sm:shrink-0">{action}</div> : null}
     </div>
   );
 }

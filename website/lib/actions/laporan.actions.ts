@@ -4,11 +4,33 @@ import { actionData, actionError, requireAdmin } from "@/lib/actions/_utils";
 import { reportFilterSchema } from "@/lib/validation";
 import type { Alumni, ReportData, ReportType, TracerStudy } from "@/types";
 
+const REPORT_BATCH_SIZE = 1000;
+
+type ReportQueryResult<T> = {
+  data: T[] | null;
+  error: { message?: string } | null;
+};
+
 function submissionYearRange(year: number) {
   return {
     start: `${year}-01-01`,
     end: `${year + 1}-01-01`
   };
+}
+
+async function getAllReportRows<T>(
+  buildQuery: (from: number, to: number) => PromiseLike<ReportQueryResult<T>>
+) {
+  const rows: T[] = [];
+
+  for (let from = 0; ; from += REPORT_BATCH_SIZE) {
+    const { data, error } = await buildQuery(from, from + REPORT_BATCH_SIZE - 1);
+    if (error) return { ok: false as const };
+
+    const batch = data ?? [];
+    rows.push(...batch);
+    if (batch.length < REPORT_BATCH_SIZE) return { ok: true as const, rows };
+  }
 }
 
 export async function getReportData(reportType: ReportType, filters: unknown) {
@@ -21,22 +43,24 @@ export async function getReportData(reportType: ReportType, filters: unknown) {
   const values = parsed.data;
 
   if (reportType === "alumni") {
-    let query = auth.adminClient
-      .from("admin_alumni_with_status")
-      .select("*")
-      .eq("is_admin", false)
-      .order("tahun_lulus", { ascending: false })
-      .order("nama_lengkap", { ascending: true })
-      .limit(5000);
+    const result = await getAllReportRows<Alumni & { tracer_submitted?: boolean }>((from, to) => {
+      let query = auth.adminClient
+        .from("admin_alumni_with_status")
+        .select("*")
+        .eq("is_admin", false)
+        .order("tahun_lulus", { ascending: false })
+        .order("nama_lengkap", { ascending: true })
+        .range(from, to);
 
-    if (values.prodi?.length) query = query.in("prodi", values.prodi);
-    if (values.tahunMulai) query = query.gte("tahun_lulus", values.tahunMulai);
-    if (values.tahunAkhir) query = query.lte("tahun_lulus", values.tahunAkhir);
+      if (values.prodi?.length) query = query.in("prodi", values.prodi);
+      if (values.tahunMulai) query = query.gte("tahun_lulus", values.tahunMulai);
+      if (values.tahunAkhir) query = query.lte("tahun_lulus", values.tahunAkhir);
+      return query;
+    });
 
-    const { data, error } = await query;
-    if (error) return actionError<ReportData>("Gagal mengambil data alumni");
+    if (!result.ok) return actionError<ReportData>("Gagal mengambil data alumni");
 
-    const rows = ((data ?? []) as Array<Alumni & { tracer_submitted?: boolean }>).map((row) => {
+    const rows = result.rows.map((row) => {
       const { tracer_submitted: tracerSubmitted, ...alumni } = row;
       return {
         ...alumni,
@@ -47,27 +71,29 @@ export async function getReportData(reportType: ReportType, filters: unknown) {
     return actionData<ReportData>({ type: "alumni", rows });
   }
 
-  let query = auth.adminClient
-    .from("tracer_study")
-    .select("*, alumni!inner(nim,nama_lengkap,prodi,tahun_lulus,ipk,email,no_hp,is_admin)")
-    .eq("is_submitted", true)
-    .eq("alumni.is_admin", false)
-    .order("submitted_at", { ascending: false, nullsFirst: false })
-    .limit(5000);
+  const result = await getAllReportRows<TracerStudy>((from, to) => {
+    let query = auth.adminClient
+      .from("tracer_study")
+      .select("*, alumni!inner(nim,nama_lengkap,prodi,tahun_lulus,ipk,email,no_hp,is_admin)")
+      .eq("is_submitted", true)
+      .eq("alumni.is_admin", false)
+      .order("submitted_at", { ascending: false, nullsFirst: false })
+      .range(from, to);
 
-  if (values.prodi?.length) query = query.in("alumni.prodi", values.prodi);
-  if (values.tahunMulai) query = query.gte("alumni.tahun_lulus", values.tahunMulai);
-  if (values.tahunAkhir) query = query.lte("alumni.tahun_lulus", values.tahunAkhir);
-  if (values.status_kerja && values.status_kerja !== "all") query = query.eq("status_kerja", values.status_kerja);
-  if (values.tahunPengisian) {
-    const range = submissionYearRange(values.tahunPengisian);
-    query = query.gte("submitted_at", range.start).lt("submitted_at", range.end);
-  }
+    if (values.prodi?.length) query = query.in("alumni.prodi", values.prodi);
+    if (values.tahunMulai) query = query.gte("alumni.tahun_lulus", values.tahunMulai);
+    if (values.tahunAkhir) query = query.lte("alumni.tahun_lulus", values.tahunAkhir);
+    if (values.status_kerja && values.status_kerja !== "all") query = query.eq("status_kerja", values.status_kerja);
+    if (values.tahunPengisian) {
+      const range = submissionYearRange(values.tahunPengisian);
+      query = query.gte("submitted_at", range.start).lt("submitted_at", range.end);
+    }
+    return query;
+  });
 
-  const { data, error } = await query;
-  if (error) return actionError<ReportData>("Gagal mengambil data laporan");
+  if (!result.ok) return actionError<ReportData>("Gagal mengambil data laporan");
 
-  return actionData<ReportData>({ type: reportType, rows: (data ?? []) as TracerStudy[] });
+  return actionData<ReportData>({ type: reportType, rows: result.rows });
 }
 
 export async function getReportPreviewCount(reportType: ReportType, filters: unknown) {
