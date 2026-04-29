@@ -17,14 +17,14 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <TextView
+            <ImageView
                 android:layout_width="44dp"
                 android:layout_height="44dp"
                 android:background="@drawable/bg_logo_circle"
-                android:gravity="center"
-                android:text="FT"
-                android:textColor="@color/action_primary"
-                android:textStyle="bold" />
+                android:contentDescription="@string/app_logo"
+                android:padding="5dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/logo" />
 
             <TextView
                 android:layout_width="0dp"

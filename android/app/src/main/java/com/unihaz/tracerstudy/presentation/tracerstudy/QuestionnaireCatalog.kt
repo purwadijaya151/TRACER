@@ -158,6 +158,7 @@ object TracerStudyQuestionnaire {
                     id = "f505",
                     label = "Berapa rata-rata pendapatan Anda per bulan (take home pay)?",
                     inputType = TextQuestionType.Number,
+                    suffix = "Rupiah",
                     requiredWhen = RequiredWhen("f8", setOf("1"))
                 ),
                 TextQuestion(
@@ -341,7 +342,7 @@ object TracerStudyQuestionnaire {
                 ),
                 TextQuestion(
                     id = "f6",
-                    label = "Berapa perusahaan/instansi/institusi yang sudah Anda lamar sebelum memperoleh pekerjaan pertama?",
+                    label = "Berapa perusahaan/instansi/institusi yang sudah Anda lamar (lewat surat atau e-mail) sebelum Anda memperoleh pekerjaan pertama?",
                     inputType = TextQuestionType.Number,
                     suffix = "perusahaan/instansi/institusi"
                 ),
@@ -359,7 +360,7 @@ object TracerStudyQuestionnaire {
                 ),
                 SingleChoiceQuestion(
                     id = "f1001",
-                    label = "Apakah Anda aktif mencari pekerjaan dalam 4 minggu terakhir?",
+                    label = "Apakah Anda aktif mencari pekerjaan dalam 4 minggu terakhir? Pilihlah satu jawaban",
                     options = listOf(
                         ChoiceOption("1", "Tidak"),
                         ChoiceOption("2", "Tidak, tapi saya sedang menunggu hasil lamaran kerja"),

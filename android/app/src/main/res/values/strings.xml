@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Tracer Study Fakultas Teknik</string>
+    <string name="app_logo">Logo Tracer Study Fakultas Teknik</string>
     <string name="app_subtitle">Platform alumni Fakultas Teknik</string>
     <string name="app_tagline">Menghubungkan Alumni, Membangun Fakultas Teknik</string>
     <string name="home_info_open">Tracer Study Fakultas Teknik telah dibuka untuk seluruh alumni Fakultas Teknik.</string>

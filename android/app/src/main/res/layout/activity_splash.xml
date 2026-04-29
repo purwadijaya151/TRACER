@@ -12,15 +12,14 @@
         android:orientation="vertical"
         android:padding="@dimen/space_xl">
 
-        <TextView
+        <ImageView
             android:layout_width="88dp"
             android:layout_height="88dp"
             android:background="@drawable/bg_logo_circle"
-            android:gravity="center"
-            android:text="FT"
-            android:textColor="@color/action_primary"
-            android:textSize="28sp"
-            android:textStyle="bold" />
+            android:contentDescription="@string/app_logo"
+            android:padding="10dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/logo" />
 
         <TextView
             android:layout_width="match_parent"
