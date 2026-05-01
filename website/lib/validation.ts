@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  NPM_REGEX,
   NPP_DIGIT_LENGTH,
   NPP_REGEX,
   QUESTIONNAIRE_DEFAULT_VERSION,
@@ -19,7 +20,10 @@ export const loginSchema = z.object({
 });
 
 export const alumniSchema = z.object({
-  nim: z.string().min(3, "NPM wajib diisi").max(20),
+  nim: z
+    .string()
+    .trim()
+    .regex(NPM_REGEX, "NPM harus 5-20 karakter dan hanya berisi angka atau titik"),
   nama_lengkap: z.string().min(3, "Nama wajib diisi").max(100),
   prodi: z.enum(PRODI_OPTIONS as [string, ...string[]]),
   tahun_masuk: z.coerce.number().int().min(1980).max(2100),

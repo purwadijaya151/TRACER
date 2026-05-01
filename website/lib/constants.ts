@@ -29,6 +29,8 @@ export const WAKTU_TUNGGU_OPTIONS: WaktuTunggu[] = [
 export const NPP_DIGIT_LENGTH = 18;
 export const NPP_EXAMPLE = "198001012024011001";
 export const NPP_REGEX = /^\d{18}$/;
+export const INSTITUTION_EMAIL_DOMAIN = "ft.unihaz.ac.id";
+export const NPM_REGEX = /^[0-9.]{5,20}$/;
 export const QUESTIONNAIRE_DEFAULT_VERSION = "launch-v1";
 export const QUESTION_TYPE_OPTIONS: QuestionType[] = [
   "text",

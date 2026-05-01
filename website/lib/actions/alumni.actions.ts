@@ -1,6 +1,7 @@
 "use server";
 
 import { alumniSchema, alumniUpdateSchema } from "@/lib/validation";
+import { INSTITUTION_EMAIL_DOMAIN } from "@/lib/constants";
 import {
   actionData,
   actionError,
@@ -51,6 +52,10 @@ function normalizeAlumniPayload(payload: Record<string, unknown>) {
     alamat: sanitizeText(payload.alamat as string | undefined) ?? null,
     foto_url: sanitizeText(payload.foto_url as string | undefined) ?? null
   };
+}
+
+function toAlumniAuthEmail(nim: string) {
+  return `${nim.trim().toLowerCase().replace(/\s+/g, "")}@${INSTITUTION_EMAIL_DOMAIN}`;
 }
 
 async function assertNonAdminTarget(auth: Awaited<ReturnType<typeof requireAdmin>>, ids: string[], action = "diubah") {
@@ -261,8 +266,9 @@ export async function createAlumni(input: unknown) {
   if (!payload.email) return actionError<Alumni>("Email wajib diisi untuk membuat akun alumni");
 
   const password = parsed.data.password || `${payload.nim}@Tracer2026`;
+  const authEmail = toAlumniAuthEmail(payload.nim);
   const { data: userData, error: userError } = await auth.adminClient.auth.admin.createUser({
-    email: payload.email,
+    email: authEmail,
     password,
     email_confirm: true,
     user_metadata: {
@@ -306,28 +312,27 @@ export async function updateAlumni(id: string, input: unknown) {
   if (!guard.ok) return actionError<Alumni>(guard.error);
 
   const payload = normalizeAlumniPayload(parsed.data);
+  const authEmail = toAlumniAuthEmail(payload.nim);
   let previousAuthEmail: string | null = null;
   let authEmailChanged = false;
 
-  if (payload.email) {
-    const { data: authUser, error: authUserError } = await auth.adminClient.auth.admin.getUserById(id);
-    if (authUserError || !authUser.user) {
-      reportActionError("alumni.updateAlumni.getAuthUser", authUserError, { id });
-      return actionError<Alumni>("Gagal memvalidasi akun Auth alumni");
-    }
+  const { data: authUser, error: authUserError } = await auth.adminClient.auth.admin.getUserById(id);
+  if (authUserError || !authUser.user) {
+    reportActionError("alumni.updateAlumni.getAuthUser", authUserError, { id });
+    return actionError<Alumni>("Gagal memvalidasi akun Auth alumni");
+  }
 
-    previousAuthEmail = authUser.user.email ?? null;
-    if (previousAuthEmail !== payload.email) {
-      const { error: authUpdateError } = await auth.adminClient.auth.admin.updateUserById(id, {
-        email: payload.email,
-        email_confirm: true
-      });
-      if (authUpdateError) {
-        reportActionError("alumni.updateAlumni.authEmail", authUpdateError, { id });
-        return actionError<Alumni>("Email Auth alumni gagal diperbarui");
-      }
-      authEmailChanged = true;
+  previousAuthEmail = authUser.user.email ?? null;
+  if (previousAuthEmail !== authEmail) {
+    const { error: authUpdateError } = await auth.adminClient.auth.admin.updateUserById(id, {
+      email: authEmail,
+      email_confirm: true
+    });
+    if (authUpdateError) {
+      reportActionError("alumni.updateAlumni.authEmail", authUpdateError, { id });
+      return actionError<Alumni>("Email Auth alumni gagal diperbarui");
     }
+    authEmailChanged = true;
   }
 
   const { data, error } = await auth.adminClient

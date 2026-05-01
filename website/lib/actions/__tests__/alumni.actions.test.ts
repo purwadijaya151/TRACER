@@ -5,12 +5,14 @@ const mocks = vi.hoisted(() => {
   const inFilter = vi.fn(async () => ({ data: [] as Array<{ id: string; is_admin: boolean }>, error: null }));
   const select = vi.fn(() => ({ single, in: inFilter }));
   const upsert = vi.fn(() => ({ select }));
+  const eq = vi.fn(() => ({ select }));
+  const update = vi.fn(() => ({ eq }));
   const getUserById = vi.fn(async () => ({ data: { user: { email: "old@test.local" } }, error: null }));
   const updateUserById = vi.fn(async () => ({ error: null as null | { message: string } }));
-  const from = vi.fn<(...args: unknown[]) => unknown>(() => ({ upsert }));
+  const from = vi.fn<(...args: unknown[]) => unknown>(() => ({ upsert, update, select }));
   const createUser = vi.fn(async () => ({ data: { user: { id: "user-1" } }, error: null }));
   const deleteUser = vi.fn(async () => ({ error: null }));
-  return { single, inFilter, select, upsert, from, createUser, deleteUser, getUserById, updateUserById };
+  return { single, inFilter, select, upsert, eq, update, from, createUser, deleteUser, getUserById, updateUserById };
 });
 
 vi.mock("@/lib/actions/_utils", () => ({
@@ -61,7 +63,7 @@ function createPagedBuilder<T>(batches: T[][]) {
 describe("createAlumni", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.from.mockReturnValue({ upsert: mocks.upsert, select: mocks.select });
+    mocks.from.mockReturnValue({ upsert: mocks.upsert, update: mocks.update, select: mocks.select });
   });
 
   it("creates an auth user then upserts the alumni row", async () => {
@@ -77,7 +79,14 @@ describe("createAlumni", () => {
 
     expect(result.error).toBeNull();
     expect(mocks.createUser).toHaveBeenCalledWith(
-      expect.objectContaining({ email: "alumni@test.local", password: "secret123" })
+      expect.objectContaining({
+        email: "2026001@ft.unihaz.ac.id",
+        password: "secret123",
+        user_metadata: expect.objectContaining({
+          nim: "2026001",
+          email: "alumni@test.local"
+        })
+      })
     );
     expect(mocks.upsert).toHaveBeenCalledWith(
       expect.objectContaining({ id: "user-1", nim: "2026001", is_admin: false }),
@@ -94,7 +103,7 @@ describe("createAlumni", () => {
     expect(mocks.deleteUser).not.toHaveBeenCalled();
   });
 
-  it("stops alumni profile updates when Supabase Auth rejects the new email", async () => {
+  it("stops alumni profile updates when Supabase Auth rejects the NPM login email", async () => {
     mocks.getUserById.mockResolvedValueOnce({ data: { user: { email: "old@test.local" } }, error: null });
     mocks.updateUserById.mockResolvedValueOnce({ error: { message: "duplicate email" } });
 
@@ -109,10 +118,35 @@ describe("createAlumni", () => {
 
     expect(result.error).toBe("Email Auth alumni gagal diperbarui");
     expect(mocks.updateUserById).toHaveBeenCalledWith("user-1", {
-      email: "new@test.local",
+      email: "2026001@ft.unihaz.ac.id",
       email_confirm: true
     });
     expect(mocks.upsert).not.toHaveBeenCalled();
+  });
+
+  it("updates contact email without changing the current NPM login email", async () => {
+    mocks.getUserById.mockResolvedValueOnce({
+      data: { user: { email: "2026001@ft.unihaz.ac.id" } },
+      error: null
+    });
+
+    const result = await updateAlumni("user-1", {
+      nim: "2026001",
+      nama_lengkap: "Alumni Test",
+      prodi: "Teknik Informatika",
+      tahun_masuk: 2022,
+      tahun_lulus: 2026,
+      email: "new-contact@test.local"
+    });
+
+    expect(result.error).toBeNull();
+    expect(mocks.updateUserById).not.toHaveBeenCalled();
+    expect(mocks.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        nim: "2026001",
+        email: "new-contact@test.local"
+      })
+    );
   });
 
   it("exports every alumni batch without the old 5000-row cap", async () => {
