@@ -1,6 +1,7 @@
 package com.unihaz.tracerstudy.data.repository
 
 import com.unihaz.tracerstudy.core.network.NetworkResult
+import com.unihaz.tracerstudy.core.utils.UserMessages
 import com.unihaz.tracerstudy.core.utils.toInstitutionEmail
 import com.unihaz.tracerstudy.data.local.SessionManager
 import com.unihaz.tracerstudy.data.model.AlumniRegisterPayload
@@ -37,7 +38,7 @@ class AuthRepository(
                         NetworkResult.Success(Unit)
                     }
                     is NetworkResult.Error -> NetworkResult.Error(
-                        "Akun berhasil dikenali, tetapi profil alumni belum tersedia. Pastikan schema Supabase sudah dijalankan.",
+                        UserMessages.PROFILE_NOT_AVAILABLE,
                         profile.code
                     )
                     NetworkResult.Loading -> NetworkResult.Loading

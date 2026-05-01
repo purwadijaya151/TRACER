@@ -11,6 +11,7 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import coil.load
 import coil.transform.CircleCropTransformation
 import com.unihaz.tracerstudy.R
+import com.unihaz.tracerstudy.core.utils.UserMessages
 import com.unihaz.tracerstudy.core.utils.showMessage
 import com.unihaz.tracerstudy.presentation.auth.AuthActivity
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -23,7 +24,7 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
         refresh.setOnRefreshListener { viewModel.load() }
         view.findViewById<TextView>(R.id.btnLogout).setOnClickListener { viewModel.logout() }
         view.findViewById<View>(R.id.btnEditProfile).setOnClickListener {
-            view.showMessage("Edit profil dapat dilakukan setelah data Supabase terhubung")
+            view.showMessage(UserMessages.EDIT_PROFILE_UNAVAILABLE)
         }
 
         viewModel.state.observe(viewLifecycleOwner) { state ->
