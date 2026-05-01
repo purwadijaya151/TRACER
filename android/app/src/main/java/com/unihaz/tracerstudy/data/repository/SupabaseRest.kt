@@ -54,6 +54,11 @@ internal object SupabaseRest {
         contentType(ContentType.Application.Json)
     }
 
+    fun HttpRequestBuilder.jsonHeaders() {
+        accept(ContentType.Application.Json)
+        contentType(ContentType.Application.Json)
+    }
+
     suspend fun responseToUnit(response: HttpResponse): NetworkResult<Unit> {
         return if (response.status.value in 200..299) {
             NetworkResult.Success(Unit)

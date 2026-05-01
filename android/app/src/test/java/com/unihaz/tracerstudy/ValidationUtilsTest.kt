@@ -19,8 +19,47 @@ class ValidationUtilsTest {
     }
 
     @Test
+    fun matchingPasswordConfirmationReturnsTrue() {
+        assertTrue(ValidationUtils.isPasswordConfirmationMatch("password123", "password123"))
+    }
+
+    @Test
+    fun mismatchedPasswordConfirmationReturnsFalse() {
+        assertFalse(ValidationUtils.isPasswordConfirmationMatch("password123", "password124"))
+    }
+
+    @Test
+    fun sameCurrentAndNewPasswordReturnsFalse() {
+        assertFalse(ValidationUtils.isDifferentPassword("password123", "password123"))
+    }
+
+    @Test
+    fun differentCurrentAndNewPasswordReturnsTrue() {
+        assertTrue(ValidationUtils.isDifferentPassword("password123", "password124"))
+    }
+
+    @Test
+    fun isValidPasswordUsesMinimumLength() {
+        assertFalse(ValidationUtils.isValidPassword("12345"))
+        assertTrue(ValidationUtils.isValidPassword("123456"))
+    }
+
+    @Test
     fun validatesIpkRange() {
         assertTrue(ValidationUtils.isValidIpk(3.75))
         assertFalse(ValidationUtils.isValidIpk(4.2))
+    }
+
+    @Test
+    fun acceptsBlankProfilePhone() {
+        assertTrue(ValidationUtils.isValidProfilePhone(null))
+        assertTrue(ValidationUtils.isValidProfilePhone(""))
+        assertTrue(ValidationUtils.isValidProfilePhone("   "))
+    }
+
+    @Test
+    fun limitsProfilePhoneToDatabaseLength() {
+        assertTrue(ValidationUtils.isValidProfilePhone("081234567890123"))
+        assertFalse(ValidationUtils.isValidProfilePhone("0812345678901234"))
     }
 }

@@ -91,7 +91,7 @@
                 android:focusable="true"
                 android:foreground="?attr/selectableItemBackground"
                 android:gravity="center_vertical|end"
-                android:text="Lupa Password?"
+                android:text="@string/login_forgot_password"
                 android:textColor="@color/link_primary"
                 android:textStyle="bold" />
 

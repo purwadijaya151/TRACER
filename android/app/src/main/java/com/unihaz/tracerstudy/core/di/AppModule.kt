@@ -7,6 +7,9 @@ import com.unihaz.tracerstudy.data.repository.AuthRepository
 import com.unihaz.tracerstudy.data.repository.NotificationRepository
 import com.unihaz.tracerstudy.data.repository.TracerStudyRepository
 import com.unihaz.tracerstudy.domain.usecase.alumni.GetAlumniProfileUseCase
+import com.unihaz.tracerstudy.domain.usecase.alumni.UpdateAlumniPhotoUseCase
+import com.unihaz.tracerstudy.domain.usecase.alumni.UpdateAlumniProfileUseCase
+import com.unihaz.tracerstudy.domain.usecase.auth.ChangePasswordUseCase
 import com.unihaz.tracerstudy.domain.usecase.auth.LoginUseCase
 import com.unihaz.tracerstudy.domain.usecase.auth.RegisterUseCase
 import com.unihaz.tracerstudy.domain.usecase.auth.ResetPasswordUseCase
@@ -30,21 +33,24 @@ val appModule = module {
     single { AlumniRepository(get()) }
     single { TracerStudyRepository(get()) }
     single { NotificationRepository(get()) }
-    single { AuthRepository(get(), get()) }
+    single { AuthRepository(sessionManager = get(), alumniRepository = get()) }
 
     factory { LoginUseCase(get()) }
     factory { RegisterUseCase(get()) }
     factory { ResetPasswordUseCase(get()) }
+    factory { ChangePasswordUseCase(get()) }
     factory { GetAlumniProfileUseCase(get()) }
+    factory { UpdateAlumniPhotoUseCase(get()) }
+    factory { UpdateAlumniProfileUseCase(get()) }
     factory { SaveTracerStudyUseCase(get()) }
     factory { SubmitTracerStudyUseCase(get()) }
 
     viewModel { SplashViewModel(get(), get()) }
     viewModel { OnboardingViewModel(get()) }
-    viewModel { LoginViewModel(get(), get()) }
+    viewModel { LoginViewModel(loginUseCase = get(), resetPasswordUseCase = get()) }
     viewModel { RegisterViewModel(get()) }
     viewModel { HomeViewModel(get(), get(), get(), get()) }
     viewModel { TracerStudyViewModel(get(), get(), get(), get(), get()) }
-    viewModel { ProfileViewModel(get(), get(), get(), get()) }
+    viewModel { ProfileViewModel(get(), get(), get(), get(), get(), get(), get()) }
     viewModel { NotificationViewModel(get(), get()) }
 }

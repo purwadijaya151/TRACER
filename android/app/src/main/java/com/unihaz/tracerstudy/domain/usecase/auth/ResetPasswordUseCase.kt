@@ -4,6 +4,6 @@ import com.unihaz.tracerstudy.core.network.NetworkResult
 import com.unihaz.tracerstudy.data.repository.AuthRepository
 
 class ResetPasswordUseCase(private val authRepository: AuthRepository) {
-    suspend operator fun invoke(nim: String): NetworkResult<Unit> =
-        authRepository.resetPassword(nim)
+    suspend operator fun invoke(nim: String, email: String): NetworkResult<Unit> =
+        authRepository.resetPassword(nim, email)
 }

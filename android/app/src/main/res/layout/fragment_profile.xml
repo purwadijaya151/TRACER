@@ -27,7 +27,10 @@
                     android:layout_width="72dp"
                     android:layout_height="72dp"
                     android:background="@drawable/bg_avatar"
-                    android:contentDescription="Foto profil" />
+                    android:clickable="true"
+                    android:contentDescription="@string/profile_photo_content_description"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackgroundBorderless" />
 
                 <TextView
                     android:id="@+id/tvProfileName"
@@ -111,7 +114,15 @@
                     android:layout_width="match_parent"
                     android:layout_height="54dp"
                     android:layout_marginTop="@dimen/space_lg"
-                    android:text="Edit Profil" />
+                    android:text="@string/profile_edit_button" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnChangePassword"
+                    style="@style/Widget.TracerStudy.Button.Outlined"
+                    android:layout_width="match_parent"
+                    android:layout_height="54dp"
+                    android:layout_marginTop="@dimen/space_md"
+                    android:text="@string/profile_change_password" />
 
                 <TextView
                     android:id="@+id/btnLogout"

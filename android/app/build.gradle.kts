@@ -30,6 +30,7 @@ fun String.toBuildConfigString(): String =
 
 val supabaseUrl = requiredLocalProperty("SUPABASE_URL")
 val supabaseAnonKey = requiredLocalProperty("SUPABASE_ANON_KEY")
+val resetPasswordApiUrl = requiredLocalProperty("RESET_PASSWORD_API_URL")
 
 android {
     namespace = "com.unihaz.tracerstudy"
@@ -45,6 +46,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "SUPABASE_URL", supabaseUrl.toBuildConfigString())
         buildConfigField("String", "SUPABASE_ANON_KEY", supabaseAnonKey.toBuildConfigString())
+        buildConfigField("String", "RESET_PASSWORD_API_URL", resetPasswordApiUrl.toBuildConfigString())
     }
 
     buildTypes {

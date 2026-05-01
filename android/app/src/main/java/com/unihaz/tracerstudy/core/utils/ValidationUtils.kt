@@ -1,14 +1,25 @@
 package com.unihaz.tracerstudy.core.utils
 
 object ValidationUtils {
+    const val PROFILE_PHONE_MAX_LENGTH = 15
+
     private val nimRegex = Regex("^[0-9.]{5,20}$")
 
     fun isValidNim(nim: String): Boolean = nimRegex.matches(nim.trim())
 
     fun isValidPassword(password: String): Boolean = password.length >= 6
 
+    fun isPasswordConfirmationMatch(password: String, confirmation: String): Boolean =
+        password == confirmation
+
+    fun isDifferentPassword(currentPassword: String, newPassword: String): Boolean =
+        currentPassword != newPassword
+
     fun isValidEmail(email: String): Boolean =
         Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$").matches(email.trim())
+
+    fun isValidProfilePhone(phone: String?): Boolean =
+        phone.isNullOrBlank() || phone.trim().length <= PROFILE_PHONE_MAX_LENGTH
 
     fun isValidYear(year: Int): Boolean = year in 1990..2100
 

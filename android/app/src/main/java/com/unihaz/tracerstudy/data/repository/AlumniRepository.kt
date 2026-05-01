@@ -6,12 +6,15 @@ import com.unihaz.tracerstudy.data.local.SessionManager
 import com.unihaz.tracerstudy.data.model.Alumni
 import io.ktor.client.request.get
 import io.ktor.client.request.patch
+import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import kotlinx.serialization.builtins.ListSerializer
-import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 class AlumniRepository(private val sessionManager: SessionManager) {
     suspend fun getProfile(alumniId: String, tokenOverride: String? = null): NetworkResult<Alumni> = runCatching {
@@ -25,12 +28,19 @@ class AlumniRepository(private val sessionManager: SessionManager) {
         }
     }.getOrElse { SupabaseRest.mapThrowable(it) }
 
-    suspend fun updateProfile(profile: Alumni): NetworkResult<Alumni> = runCatching {
+    suspend fun updateProfile(alumniId: String, email: String, noHp: String?): NetworkResult<Alumni> = runCatching {
         val token = sessionManager.getSession()?.accessToken
             ?: return NetworkResult.Error("Sesi login tidak ditemukan")
-        val response = SupabaseRest.httpClient.patch("${SupabaseRest.baseUrl}/rest/v1/alumni?id=eq.${profile.id}") {
+        val response = SupabaseRest.httpClient.patch("${SupabaseRest.baseUrl}/rest/v1/alumni?id=eq.$alumniId") {
             SupabaseRest.run { supabaseHeaders(token, "return=representation") }
-            setBody(SupabaseRest.json.encodeToString(profile))
+            setBody(
+                JsonObject(
+                    mapOf(
+                        "email" to JsonPrimitive(email),
+                        "no_hp" to (noHp?.let { JsonPrimitive(it) } ?: JsonNull)
+                    )
+                ).toString()
+            )
         }
         SupabaseRest.parseResponse(response) { body ->
             SupabaseRest.json.decodeFromString(ListSerializer(Alumni.serializer()), body).first()
@@ -57,6 +67,18 @@ class AlumniRepository(private val sessionManager: SessionManager) {
                 NetworkResult.Loading -> NetworkResult.Error("Terjadi kesalahan, silakan coba beberapa saat lagi")
                 is NetworkResult.Success -> NetworkResult.Error("Terjadi kesalahan, silakan coba beberapa saat lagi")
             }
+        }
+    }.getOrElse { SupabaseRest.mapThrowable(it) }
+
+    suspend fun saveProfilePhotoUrl(photoUrl: String): NetworkResult<Alumni> = runCatching {
+        val token = sessionManager.getSession()?.accessToken
+            ?: return NetworkResult.Error("Sesi login tidak ditemukan")
+        val response = SupabaseRest.httpClient.post("${SupabaseRest.baseUrl}/rest/v1/rpc/update_own_alumni_photo") {
+            SupabaseRest.run { supabaseHeaders(token) }
+            setBody(JsonObject(mapOf("p_foto_url" to JsonPrimitive(photoUrl))).toString())
+        }
+        SupabaseRest.parseResponse(response) { body ->
+            SupabaseRest.json.decodeFromString(Alumni.serializer(), body)
         }
     }.getOrElse { SupabaseRest.mapThrowable(it) }
 

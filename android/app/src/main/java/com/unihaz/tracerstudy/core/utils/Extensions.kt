@@ -4,7 +4,7 @@ import android.view.View
 import com.google.android.material.snackbar.Snackbar
 
 fun View.showMessage(message: String) {
-    Snackbar.make(this, message, Snackbar.LENGTH_LONG).show()
+    Snackbar.make(this, UserMessageSanitizer.snackbar(message), Snackbar.LENGTH_LONG).show()
 }
 
 fun String.toInstitutionEmail(): String =

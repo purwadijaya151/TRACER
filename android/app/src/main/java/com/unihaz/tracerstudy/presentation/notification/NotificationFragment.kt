@@ -7,6 +7,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import com.unihaz.tracerstudy.R
+import com.unihaz.tracerstudy.core.utils.UserMessageSanitizer
 import com.unihaz.tracerstudy.core.utils.showMessage
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
@@ -30,8 +31,10 @@ class NotificationFragment : Fragment(R.layout.fragment_notification) {
             state.error?.let(view::showMessage)
             state.notifications.forEach { notification ->
                 val item = LayoutInflater.from(requireContext()).inflate(R.layout.view_notification_item, list, false)
-                item.findViewById<TextView>(R.id.tvNotificationTitle).text = notification.title
-                item.findViewById<TextView>(R.id.tvNotificationBody).text = notification.body
+                item.findViewById<TextView>(R.id.tvNotificationTitle).text =
+                    UserMessageSanitizer.notificationTitle(notification.title)
+                item.findViewById<TextView>(R.id.tvNotificationBody).text =
+                    UserMessageSanitizer.notificationBody(notification.body)
                 item.setBackgroundResource(if (notification.isRead) R.drawable.bg_card else R.drawable.bg_unread_notification)
                 item.setOnClickListener { viewModel.markAsRead(notification.id) }
                 list.addView(item)
