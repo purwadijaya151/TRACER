@@ -45,6 +45,23 @@ class TracerStudyRepository(private val sessionManager: SessionManager) {
         }
     }.getOrElse { SupabaseRest.mapThrowable(it) }
 
+    suspend fun getSubmittedHistory(alumniId: String): NetworkResult<List<TracerStudy>> = runCatching {
+        val token = sessionManager.getSession()?.accessToken
+            ?: return NetworkResult.Error("Sesi login tidak ditemukan")
+        val response = SupabaseRest.httpClient.get(
+            "${SupabaseRest.baseUrl}/rest/v1/tracer_study_history" +
+                "?select=*" +
+                "&alumni_id=eq.$alumniId" +
+                "&is_submitted=eq.true" +
+                "&order=submitted_at.desc,recorded_at.desc"
+        ) {
+            SupabaseRest.run { supabaseHeaders(token) }
+        }
+        SupabaseRest.parseResponse(response) { body ->
+            SupabaseRest.json.decodeFromString(ListSerializer(TracerStudy.serializer()), body)
+        }
+    }.getOrElse { SupabaseRest.mapThrowable(it) }
+
     suspend fun saveDraft(tracerStudy: TracerStudy): NetworkResult<TracerStudy> =
         upsert(tracerStudy.copy(isSubmitted = false, submittedAt = null))
 

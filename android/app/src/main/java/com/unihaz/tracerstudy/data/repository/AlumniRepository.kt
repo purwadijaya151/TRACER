@@ -52,7 +52,7 @@ class AlumniRepository(private val sessionManager: SessionManager) {
         val token = session?.accessToken
             ?: return NetworkResult.Error("Sesi login tidak ditemukan")
         val cleanFileName = fileName.substringAfterLast('/').substringAfterLast('\\')
-        val objectPath = "${session.alumniId}/$cleanFileName".replace("\\", "/")
+        val objectPath = "${session.alumniId}/${System.currentTimeMillis()}-$cleanFileName".replace("\\", "/")
         val response = SupabaseRest.httpClient.put("${SupabaseRest.baseUrl}/storage/v1/object/${Constants.BUCKET_ALUMNI_PHOTOS}/$objectPath") {
             SupabaseRest.run { supabaseHeaders(token) }
             headers.append("x-upsert", "true")

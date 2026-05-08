@@ -18,8 +18,6 @@ import io.ktor.http.HttpHeaders
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
@@ -87,27 +85,33 @@ class AuthRepository private constructor(
         password: String,
         alumniData: AlumniRegisterPayload
     ): NetworkResult<Unit> = runCatching {
-        val metadata = buildJsonObject {
-            put("nim", alumniData.nim)
-            put("nama_lengkap", alumniData.namaLengkap)
-            put("prodi", alumniData.prodi)
-            put("tahun_masuk", alumniData.tahunMasuk)
-            put("tahun_lulus", alumniData.tahunLulus)
-            put("email", alumniData.email)
+        val registerApiUrl = BuildConfig.REGISTER_API_URL.trim()
+        if (registerApiUrl.isBlank()) {
+            return@runCatching NetworkResult.Error("Fitur pendaftaran belum siap. Hubungi admin fakultas.")
         }
-        val response = SupabaseRest.httpClient.post("${SupabaseRest.baseUrl}/auth/v1/signup") {
-            SupabaseRest.run { supabaseHeaders() }
+
+        val response = SupabaseRest.httpClient.post(registerApiUrl) {
+            SupabaseRest.run { jsonHeaders() }
             setBody(
                 SupabaseRest.json.encodeToString(
-                    AuthSignupRequest(
-                        email = nim.toInstitutionEmail(),
+                    RegisterAlumniRequest(
+                        nim = alumniData.nim,
                         password = password,
-                        data = metadata
+                        namaLengkap = alumniData.namaLengkap,
+                        prodi = alumniData.prodi,
+                        tahunMasuk = alumniData.tahunMasuk,
+                        tahunLulus = alumniData.tahunLulus,
+                        email = alumniData.email
                     )
                 )
             )
         }
-        SupabaseRest.responseToUnit(response)
+
+        if (response.status.value in 200..299) {
+            NetworkResult.Success(Unit)
+        } else {
+            NetworkResult.Error(parseRegisterError(response.bodyAsText()), response.status.value)
+        }
     }.getOrElse { SupabaseRest.mapThrowable(it) }
 
     suspend fun signOut(): NetworkResult<Unit> = runCatching {
@@ -239,6 +243,11 @@ class AuthRepository private constructor(
         }.getOrNull()?.takeIf { it.isNotBlank() }
             ?: "Reset password belum dapat diproses. Coba beberapa saat lagi."
 
+        private fun parseRegisterError(body: String): String = runCatching {
+            SupabaseRest.json.decodeFromString<ApiMessageResponse>(body).message
+        }.getOrNull()?.takeIf { it.isNotBlank() }
+            ?: "Pendaftaran belum dapat diproses. Coba beberapa saat lagi."
+
         private fun buildPasswordUpdateRequest(
             accessToken: String,
             currentPassword: String,
@@ -341,10 +350,14 @@ internal class PasswordUpdateRequestException(
 private data class AuthLoginRequest(val email: String, val password: String)
 
 @Serializable
-private data class AuthSignupRequest(
-    val email: String,
+private data class RegisterAlumniRequest(
+    val nim: String,
     val password: String,
-    val data: kotlinx.serialization.json.JsonObject
+    @SerialName("nama_lengkap") val namaLengkap: String,
+    val prodi: String,
+    @SerialName("tahun_masuk") val tahunMasuk: Int,
+    @SerialName("tahun_lulus") val tahunLulus: Int,
+    val email: String
 )
 
 @Serializable
@@ -352,6 +365,9 @@ private data class ResetPasswordRequest(val nim: String, val email: String)
 
 @Serializable
 private data class ResetPasswordResponse(val message: String = "")
+
+@Serializable
+private data class ApiMessageResponse(val message: String = "")
 
 @Serializable
 private data class ChangePasswordRequest(

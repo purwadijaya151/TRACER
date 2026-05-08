@@ -17,6 +17,7 @@ import com.unihaz.tracerstudy.domain.usecase.tracerstudy.SaveTracerStudyUseCase
 import com.unihaz.tracerstudy.domain.usecase.tracerstudy.SubmitTracerStudyUseCase
 import com.unihaz.tracerstudy.presentation.auth.login.LoginViewModel
 import com.unihaz.tracerstudy.presentation.auth.register.RegisterViewModel
+import com.unihaz.tracerstudy.presentation.history.HistoryViewModel
 import com.unihaz.tracerstudy.presentation.home.HomeViewModel
 import com.unihaz.tracerstudy.presentation.notification.NotificationViewModel
 import com.unihaz.tracerstudy.presentation.onboarding.OnboardingViewModel
@@ -50,6 +51,7 @@ val appModule = module {
     viewModel { LoginViewModel(loginUseCase = get(), resetPasswordUseCase = get()) }
     viewModel { RegisterViewModel(get()) }
     viewModel { HomeViewModel(get(), get(), get(), get()) }
+    viewModel { HistoryViewModel(sessionManager = get(), tracerStudyRepository = get()) }
     viewModel { TracerStudyViewModel(get(), get(), get(), get(), get()) }
     viewModel { ProfileViewModel(get(), get(), get(), get(), get(), get(), get()) }
     viewModel { NotificationViewModel(get(), get()) }

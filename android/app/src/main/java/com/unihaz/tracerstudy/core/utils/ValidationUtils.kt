@@ -4,8 +4,23 @@ object ValidationUtils {
     const val PROFILE_PHONE_MAX_LENGTH = 15
 
     private val nimRegex = Regex("^[0-9.]{5,20}$")
+    private val nimDigitsRegex = Regex("^\\d{5,20}$")
 
-    fun isValidNim(nim: String): Boolean = nimRegex.matches(nim.trim())
+    fun normalizeNim(nim: String): String {
+        val trimmed = nim.trim().replace(Regex("\\s+"), "")
+        val digitsOnly = trimmed.replace(".", "")
+        return if (digitsOnly.length == 10 && digitsOnly.all(Char::isDigit)) {
+            "${digitsOnly.substring(0, 4)}.${digitsOnly.substring(4, 6)}.${digitsOnly.substring(6)}"
+        } else {
+            trimmed
+        }
+    }
+
+    fun isValidNim(nim: String): Boolean {
+        val trimmed = nim.trim().replace(Regex("\\s+"), "")
+        val digitsOnly = trimmed.replace(".", "")
+        return nimRegex.matches(trimmed) && nimDigitsRegex.matches(digitsOnly)
+    }
 
     fun isValidPassword(password: String): Boolean = password.length >= 6
 

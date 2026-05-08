@@ -10,24 +10,33 @@ import com.unihaz.tracerstudy.presentation.tracerstudy.TracerStudyViewModel
 
 class Step3WorkStatusFragment : Fragment(R.layout.step_3_work_status) {
     private val viewModel: TracerStudyViewModel by viewModels({ requireParentFragment() })
+    private var syncingSelection = false
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val group = view.findViewById<RadioGroup>(R.id.rgStatusKerja)
-        val selectedId = when (viewModel.state.value?.tracerStudy?.statusKerja) {
-            "Bekerja" -> R.id.rbBekerja
-            "Wirausaha" -> R.id.rbWirausaha
-            "Melanjutkan Studi" -> R.id.rbStudi
-            else -> R.id.rbBelum
-        }
-        group.check(selectedId)
         group.setOnCheckedChangeListener { _, checkedId ->
+            if (syncingSelection) return@setOnCheckedChangeListener
             val status = when (checkedId) {
                 R.id.rbBekerja -> "Bekerja"
                 R.id.rbWirausaha -> "Wirausaha"
                 R.id.rbStudi -> "Melanjutkan Studi"
-                else -> "Belum Bekerja"
+                R.id.rbBelum -> "Belum Bekerja"
+                else -> ""
             }
-            viewModel.updateStatusKerja(status)
+            if (status.isNotBlank()) {
+                viewModel.updateStatusKerja(status)
+            }
+        }
+        viewModel.state.observe(viewLifecycleOwner) { state ->
+            syncingSelection = true
+            when (state.tracerStudy.statusKerja) {
+                "Bekerja" -> group.check(R.id.rbBekerja)
+                "Wirausaha" -> group.check(R.id.rbWirausaha)
+                "Melanjutkan Studi" -> group.check(R.id.rbStudi)
+                "Belum Bekerja" -> group.check(R.id.rbBelum)
+                else -> group.clearCheck()
+            }
+            syncingSelection = false
         }
     }
 }

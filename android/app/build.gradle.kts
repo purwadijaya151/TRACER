@@ -25,12 +25,41 @@ fun requiredLocalProperty(name: String): String =
             "$name wajib diisi di local.properties, Gradle property, atau environment variable sebelum build Android."
         )
 
+fun normalizeBaseUrl(value: String): String =
+    value.trim().trimEnd('/').takeIf { it.isNotBlank() } ?: ""
+
+fun deriveWebsiteApiUrl(websiteBaseUrl: String, path: String): String {
+    val normalizedBaseUrl = normalizeBaseUrl(websiteBaseUrl)
+    return if (normalizedBaseUrl.isBlank()) "" else "$normalizedBaseUrl$path"
+}
+
+fun deriveRegisterApiUrl(resetPasswordApiUrl: String): String {
+    val normalizedUrl = normalizeBaseUrl(resetPasswordApiUrl)
+    val marker = "/api/auth/request-password-reset"
+    return if (normalizedUrl.endsWith(marker)) {
+        normalizedUrl.removeSuffix(marker) + "/api/auth/register-alumni"
+    } else {
+        ""
+    }
+}
+
 fun String.toBuildConfigString(): String =
     "\"${replace("\\", "\\\\").replace("\"", "\\\"")}\""
 
 val supabaseUrl = requiredLocalProperty("SUPABASE_URL")
 val supabaseAnonKey = requiredLocalProperty("SUPABASE_ANON_KEY")
-val resetPasswordApiUrl = requiredLocalProperty("RESET_PASSWORD_API_URL")
+val websiteBaseUrl = localProperty("WEBSITE_BASE_URL")
+val resetPasswordApiUrl = localProperty("RESET_PASSWORD_API_URL").takeIf { it.isNotBlank() }
+    ?: deriveWebsiteApiUrl(websiteBaseUrl, "/api/auth/request-password-reset").takeIf { it.isNotBlank() }
+    ?: throw GradleException(
+        "WEBSITE_BASE_URL atau RESET_PASSWORD_API_URL wajib diisi sebelum build Android."
+    )
+val registerApiUrl = localProperty("REGISTER_API_URL").takeIf { it.isNotBlank() }
+    ?: deriveWebsiteApiUrl(websiteBaseUrl, "/api/auth/register-alumni").takeIf { it.isNotBlank() }
+    ?: deriveRegisterApiUrl(resetPasswordApiUrl).takeIf { it.isNotBlank() }
+    ?: throw GradleException(
+        "REGISTER_API_URL wajib diisi atau WEBSITE_BASE_URL/RESET_PASSWORD_API_URL harus mengarah ke endpoint website yang benar."
+    )
 
 android {
     namespace = "com.unihaz.tracerstudy"
@@ -47,6 +76,7 @@ android {
         buildConfigField("String", "SUPABASE_URL", supabaseUrl.toBuildConfigString())
         buildConfigField("String", "SUPABASE_ANON_KEY", supabaseAnonKey.toBuildConfigString())
         buildConfigField("String", "RESET_PASSWORD_API_URL", resetPasswordApiUrl.toBuildConfigString())
+        buildConfigField("String", "REGISTER_API_URL", registerApiUrl.toBuildConfigString())
     }
 
     buildTypes {

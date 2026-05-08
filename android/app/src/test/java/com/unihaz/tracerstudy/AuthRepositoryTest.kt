@@ -21,6 +21,14 @@ class AuthRepositoryTest {
             "2019.01.0023@ft.unihaz.ac.id",
             AuthRepository.nimToInstitutionEmail("2019.01.0023")
         )
+        assertEquals(
+            "2019.01.0023@ft.unihaz.ac.id",
+            AuthRepository.nimToInstitutionEmail("2019010023")
+        )
+        assertEquals(
+            "202600001@ft.unihaz.ac.id",
+            AuthRepository.nimToInstitutionEmail("202600001")
+        )
     }
 
     @Test

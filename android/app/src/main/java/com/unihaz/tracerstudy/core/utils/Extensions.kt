@@ -8,4 +8,4 @@ fun View.showMessage(message: String) {
 }
 
 fun String.toInstitutionEmail(): String =
-    trim().lowercase().replace(" ", "").let { "$it@${Constants.INSTITUTION_EMAIL_DOMAIN}" }
+    ValidationUtils.normalizeNim(this).lowercase().let { "$it@${Constants.INSTITUTION_EMAIL_DOMAIN}" }

@@ -9,7 +9,7 @@ data class TracerStudy(
     @SerialName("alumni_id") val alumniId: String = "",
     @SerialName("questionnaire_version") val questionnaireVersion: String = "launch-v1",
     val answers: Map<String, String> = emptyMap(),
-    @SerialName("status_kerja") val statusKerja: String = "Belum Bekerja",
+    @SerialName("status_kerja") val statusKerja: String = "",
     @SerialName("nama_perusahaan") val namaPerusahaan: String? = null,
     @SerialName("bidang_pekerjaan") val bidangPekerjaan: String? = null,
     val jabatan: String? = null,

@@ -11,11 +11,19 @@ class ValidationUtilsTest {
     @Test
     fun validLoginReturnsNull() {
         assertNull(ValidationUtils.validateLogin("2019.01.0023", "password123"))
+        assertNull(ValidationUtils.validateLogin("2019010023", "password123"))
     }
 
     @Test
     fun invalidNimFails() {
         assertEquals("NPM tidak valid", ValidationUtils.validateLogin("abc", "password123"))
+        assertEquals("NPM tidak valid", ValidationUtils.validateLogin(".....", "password123"))
+    }
+
+    @Test
+    fun normalizesTenDigitNimToDottedFormat() {
+        assertEquals("2019.01.0023", ValidationUtils.normalizeNim("2019010023"))
+        assertEquals("202600001", ValidationUtils.normalizeNim("202600001"))
     }
 
     @Test

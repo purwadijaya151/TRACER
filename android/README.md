@@ -7,20 +7,22 @@ Android Native Kotlin app untuk Tracer Study Fakultas Teknik.
 1. Buka `local.properties`, lalu isi:
 
    ```properties
-   SUPABASE_URL=https://efutimhekjhqrwmrzmew.supabase.co
+   SUPABASE_URL=https://ftyzjlmxoydjsevuekde.supabase.co
    SUPABASE_ANON_KEY=your-anon-key-here
-   RESET_PASSWORD_API_URL=http://10.0.2.2:3002/api/auth/request-password-reset
+   WEBSITE_BASE_URL=http://10.0.2.2:3002
    ```
 
 2. Jalankan SQL di `../website/supabase/schema.sql` melalui Supabase SQL Editor.
 
-3. Untuk emulator Android, `10.0.2.2` mengarah ke server website di komputer lokal. Untuk device fisik atau release, ganti `RESET_PASSWORD_API_URL` ke URL HTTPS website yang bisa diakses perangkat.
+3. Untuk emulator Android, `10.0.2.2` mengarah ke server website di komputer lokal. Untuk device fisik atau release, ganti `WEBSITE_BASE_URL` ke URL HTTPS website yang bisa diakses perangkat.
 
    ```properties
-   RESET_PASSWORD_API_URL=https://your-vercel-domain.vercel.app/api/auth/request-password-reset
+   WEBSITE_BASE_URL=https://your-vercel-domain.vercel.app
    ```
 
-4. Untuk release, ganti domain dan pin sertifikat di `app/src/main/res/xml/network_security_config.xml` agar sesuai project Supabase dan website.
+4. `REGISTER_API_URL` dan `RESET_PASSWORD_API_URL` tetap bisa diisi manual bila perlu override, tetapi default-nya akan diturunkan otomatis dari `WEBSITE_BASE_URL`.
+
+5. Untuk release, ganti domain dan pin sertifikat di `app/src/main/res/xml/network_security_config.xml` agar sesuai project Supabase dan website.
 
 ## Build
 

@@ -72,11 +72,15 @@
 
                 <TextView
                     android:id="@+id/tvProfileTracerStatus"
-                    android:layout_width="wrap_content"
-                    android:layout_height="36dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/space_sm"
                     android:background="@drawable/bg_badge_success"
                     android:gravity="center"
+                    android:maxLines="2"
+                    android:minHeight="36dp"
+                    android:paddingTop="@dimen/space_sm"
+                    android:paddingBottom="@dimen/space_sm"
                     android:paddingStart="@dimen/space_md"
                     android:paddingEnd="@dimen/space_md"
                     android:text="Belum tersedia"

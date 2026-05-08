@@ -77,7 +77,7 @@ internal object SupabaseRest {
         return if (response.status.value in 200..299) {
             runCatching { NetworkResult.Success(parser(body)) }.getOrElse {
                 if (BuildConfig.DEBUG) {
-                    Log.e(Constants.LOG_TAG, "Parsing error", it)
+                    safeLogError("Parsing error", it)
                 }
                 NetworkResult.Error("Terjadi kesalahan, silakan coba beberapa saat lagi")
             }
@@ -88,7 +88,7 @@ internal object SupabaseRest {
     }
 
     fun mapThrowable(throwable: Throwable): NetworkResult.Error {
-        Log.e(Constants.LOG_TAG, "Network error", throwable)
+        safeLogError("Network error", throwable)
         return when (throwable) {
             is SSLException -> NetworkResult.Error("Koneksi aman ke server gagal. Coba lagi beberapa saat lagi")
             is UnknownHostException -> NetworkResult.Error("Tidak ada koneksi internet, coba lagi")
@@ -100,7 +100,17 @@ internal object SupabaseRest {
 
     private fun logSupabaseError(code: Int) {
         if (BuildConfig.DEBUG) {
-            Log.e(Constants.LOG_TAG, "Supabase request failed with HTTP $code")
+            safeLogError("Supabase request failed with HTTP $code")
+        }
+    }
+
+    private fun safeLogError(message: String, throwable: Throwable? = null) {
+        runCatching {
+            if (throwable == null) {
+                Log.e(Constants.LOG_TAG, message)
+            } else {
+                Log.e(Constants.LOG_TAG, message, throwable)
+            }
         }
     }
 

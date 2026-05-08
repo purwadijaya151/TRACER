@@ -191,12 +191,13 @@ class TracerStudyViewModel(
     private fun TracerStudy.withSeededAnswers(version: String): TracerStudy {
         if (answers.isNotEmpty()) return this
         val seeded = mutableMapOf<String, String>()
-        seeded["f8"] = when (statusKerja) {
+        when (statusKerja) {
             "Bekerja" -> "1"
             "Wirausaha" -> "3"
             "Melanjutkan Studi" -> "4"
-            else -> "5"
-        }
+            "Belum Bekerja" -> "5"
+            else -> null
+        }?.let { seeded["f8"] = it }
         namaPerusahaan?.takeIf { it.isNotBlank() }?.let { seeded["f5b"] = it }
         jabatan?.takeIf { it.isNotBlank() }?.let { seeded["f5c"] = it }
         provinsiKerja?.takeIf { it.isNotBlank() }?.let { seeded["f5a1"] = it }
@@ -214,7 +215,8 @@ class TracerStudyViewModel(
             "1" -> "Bekerja"
             "3" -> "Wirausaha"
             "4" -> "Melanjutkan Studi"
-            else -> "Belum Bekerja"
+            "5" -> "Belum Bekerja"
+            else -> ""
         }
         return copy(
             questionnaireVersion = version,

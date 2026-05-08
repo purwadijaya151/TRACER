@@ -29,6 +29,13 @@ class TracerStudyViewModelTest {
     }
 
     @Test
+    fun doesNotSeedWorkStatusForEmptyTracer() {
+        val viewModel = TracerStudyViewModel()
+        assertEquals("", viewModel.state.value?.tracerStudy?.statusKerja)
+        assertEquals(null, viewModel.state.value?.tracerStudy?.answers?.get("f8"))
+    }
+
+    @Test
     fun mapsDiktiStatusToLegacyStatus() {
         val viewModel = TracerStudyViewModel()
         viewModel.updateAnswer("f8", "3")

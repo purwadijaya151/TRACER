@@ -1,5 +1,8 @@
 package com.unihaz.tracerstudy.presentation.home
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.TextView
@@ -16,8 +19,8 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         view.findViewById<View>(R.id.cardTracer).setOnClickListener { (activity as? MainActivity)?.openTracerStudy() }
         view.findViewById<View>(R.id.cardProfile).setOnClickListener { (activity as? MainActivity)?.openProfile() }
-        view.findViewById<View>(R.id.cardHistory).setOnClickListener { view.showMessage(getString(R.string.history_unavailable)) }
-        view.findViewById<View>(R.id.cardContact).setOnClickListener { view.showMessage(getString(R.string.contact_unavailable)) }
+        view.findViewById<View>(R.id.cardHistory).setOnClickListener { (activity as? MainActivity)?.openHistory() }
+        view.findViewById<View>(R.id.cardContact).setOnClickListener { openWhatsAppContact(view) }
         view.findViewById<View>(R.id.homeBell).setOnClickListener { (activity as? MainActivity)?.openNotifications() }
 
         viewModel.state.observe(viewLifecycleOwner) { state ->
@@ -37,5 +40,18 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
     override fun onResume() {
         super.onResume()
         viewModel.load()
+    }
+
+    private fun openWhatsAppContact(view: View) {
+        val contactUri = Uri.parse(getString(R.string.contact_whatsapp_url))
+        val intent = Intent(Intent.ACTION_VIEW, contactUri)
+        runCatching { startActivity(intent) }
+            .onFailure {
+                if (it is ActivityNotFoundException) {
+                    view.showMessage(getString(R.string.contact_open_failed))
+                } else {
+                    throw it
+                }
+            }
     }
 }

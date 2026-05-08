@@ -6,6 +6,7 @@ import androidx.fragment.app.Fragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.unihaz.tracerstudy.R
 import com.unihaz.tracerstudy.presentation.home.HomeFragment
+import com.unihaz.tracerstudy.presentation.history.HistoryFragment
 import com.unihaz.tracerstudy.presentation.notification.NotificationFragment
 import com.unihaz.tracerstudy.presentation.profile.ProfileFragment
 import com.unihaz.tracerstudy.presentation.tracerstudy.TracerStudyFragment
@@ -30,8 +31,17 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
         findViewById<BottomNavigationView>(R.id.bottomNavigation).selectedItemId = R.id.nav_tracer
     }
 
+    fun openHome() {
+        findViewById<BottomNavigationView>(R.id.bottomNavigation).menu.findItem(R.id.nav_home).isChecked = true
+        showFragment(HomeFragment())
+    }
+
     fun openProfile() {
         findViewById<BottomNavigationView>(R.id.bottomNavigation).selectedItemId = R.id.nav_profile
+    }
+
+    fun openHistory() {
+        showFragment(HistoryFragment())
     }
 
     fun openNotifications() {
