@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { PRODI_OPTIONS } from "@/lib/constants";
 import { buildNimLookupCandidates, isValidNim, nimToInstitutionEmail, normalizeNim } from "@/lib/alumni-nim";
+import { consumeServerRateLimit, getClientIp } from "@/lib/server-rate-limit";
 import { createAdminClient } from "@/lib/supabase/server";
 
 type RegisterAlumniRequest = {
@@ -14,6 +15,9 @@ type RegisterAlumniRequest = {
 };
 
 const SUCCESS_MESSAGE = "Akun berhasil dibuat. Silakan masuk.";
+const RATE_LIMIT_MESSAGE = "Terlalu banyak percobaan pendaftaran. Coba lagi beberapa menit lagi.";
+const REGISTER_RATE_LIMIT_WINDOW_SECONDS = 15 * 60;
+const REGISTER_RATE_LIMIT_MAX_ATTEMPTS = 5;
 
 export async function POST(request: Request) {
   let payload: RegisterAlumniRequest;
@@ -31,6 +35,29 @@ export async function POST(request: Request) {
 
   const nim = normalizeNim(payload.nim!);
   const admin = createAdminClient();
+  const rateLimit = await consumeServerRateLimit({
+    admin,
+    scope: "register-alumni",
+    rateKeys: [
+      `ip:${getClientIp(request.headers)}`,
+      `nim:${nim.toLowerCase()}`,
+      `email:${payload.email!.trim().toLowerCase()}`
+    ],
+    windowSeconds: REGISTER_RATE_LIMIT_WINDOW_SECONDS,
+    maxAttempts: REGISTER_RATE_LIMIT_MAX_ATTEMPTS
+  });
+
+  if (rateLimit.limited) {
+    return NextResponse.json(
+      { message: RATE_LIMIT_MESSAGE },
+      {
+        status: 429,
+        headers: rateLimit.retryAfterSeconds
+          ? { "Retry-After": String(rateLimit.retryAfterSeconds) }
+          : undefined
+      }
+    );
+  }
 
   const { data: existingAlumni, error: existingAlumniError } = await admin
     .from("alumni")

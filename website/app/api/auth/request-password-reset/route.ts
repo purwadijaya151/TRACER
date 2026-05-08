@@ -5,8 +5,9 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { assertEnv } from "@/lib/utils";
 import { consumePasswordResetRateLimit } from "./password-reset-rate-limit";
 
-const SUCCESS_MESSAGE = "Jika NPM dan email cocok, link reset password akan dikirim ke email pribadi Anda.";
+const SUCCESS_MESSAGE = "Jika NPM dan email cocok, kami akan mencoba mengirim link reset password. Jika email belum masuk dalam beberapa menit, coba lagi atau hubungi admin.";
 const RATE_LIMIT_MESSAGE = "Terlalu banyak permintaan reset password. Coba lagi beberapa menit lagi.";
+const SERVICE_UNAVAILABLE_MESSAGE = "Layanan reset password sedang tidak tersedia. Coba beberapa saat lagi.";
 const MIN_RESPONSE_MS = 1500;
 const MAX_RESPONSE_JITTER_MS = 500;
 
@@ -67,6 +68,8 @@ export async function POST(request: Request) {
       );
     }
 
+    assertPasswordResetDeliveryConfigured();
+
     try {
       await sendRecoveryEmailIfAccountMatches(admin, request, nim, email);
     } catch (error) {
@@ -78,8 +81,8 @@ export async function POST(request: Request) {
     console.error("Password reset request failed", error);
     return withMinimumResponseTime(
       NextResponse.json(
-        { message: "Reset password belum dapat diproses. Coba beberapa saat lagi." },
-        { status: 500 }
+        { message: SERVICE_UNAVAILABLE_MESSAGE },
+        { status: 503 }
       ),
       startedAt
     );
@@ -188,6 +191,14 @@ function isValidEmail(email: string) {
 
 function isSameEmail(storedEmail: string | null | undefined, expectedEmail: string) {
   return storedEmail?.trim().toLowerCase() === expectedEmail.trim().toLowerCase();
+}
+
+function assertPasswordResetDeliveryConfigured() {
+  assertEnv("SMTP_HOST");
+  assertEnv("SMTP_PORT");
+  assertEnv("SMTP_USER");
+  assertEnv("SMTP_PASS");
+  assertEnv("MAIL_FROM");
 }
 
 async function sendResetPasswordEmail({

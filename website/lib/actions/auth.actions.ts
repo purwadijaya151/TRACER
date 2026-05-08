@@ -1,7 +1,9 @@
 "use server";
 
+import { headers } from "next/headers";
 import { INDONESIAN_ERRORS } from "@/lib/constants";
 import { actionData, actionError, reportActionError } from "@/lib/actions/_utils";
+import { consumeServerRateLimit, getClientIp } from "@/lib/server-rate-limit";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { loginSchema } from "@/lib/validation";
 
@@ -11,6 +13,10 @@ type AdminLoginProfile = {
   is_admin: boolean;
   npp?: string | null;
 };
+
+const LOGIN_RATE_LIMIT_MESSAGE = "Terlalu banyak percobaan login. Coba lagi beberapa menit lagi.";
+const LOGIN_RATE_LIMIT_WINDOW_SECONDS = 15 * 60;
+const LOGIN_RATE_LIMIT_MAX_ATTEMPTS = 5;
 
 export async function loginAdmin(input: unknown) {
   const parsed = loginSchema.safeParse(input);
@@ -24,6 +30,18 @@ export async function loginAdmin(input: unknown) {
   }
 
   const { npp, password } = parsed.data;
+  const requestHeaders = await headers();
+  const rateLimit = await consumeServerRateLimit({
+    admin: adminClient,
+    scope: "admin-login",
+    rateKeys: [`ip:${getClientIp(requestHeaders)}`, `npp:${npp}`],
+    windowSeconds: LOGIN_RATE_LIMIT_WINDOW_SECONDS,
+    maxAttempts: LOGIN_RATE_LIMIT_MAX_ATTEMPTS
+  });
+  if (rateLimit.limited) {
+    return actionError<{ ok: true }>(LOGIN_RATE_LIMIT_MESSAGE);
+  }
+
   const nppLookup = await adminClient
     .from("alumni")
     .select("id,email,is_admin,npp")

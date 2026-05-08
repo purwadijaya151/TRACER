@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -27,7 +28,9 @@ type SettingsForm = z.infer<typeof pengaturanSchema>;
 type PasswordForm = z.infer<typeof passwordSchema>;
 
 export default function PengaturanPage() {
+  const router = useRouter();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarVersion, setAvatarVersion] = useState<string | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [settingsLoading, setSettingsLoading] = useState(false);
 
@@ -61,6 +64,7 @@ export default function PengaturanPage() {
           foto_url: profile.data.foto_url ?? ""
         });
         setAvatarUrl(profile.data.foto_url ?? null);
+        setAvatarVersion(profile.data.updated_at ?? null);
       }
       if (settings.data) settingsForm.reset(settings.data);
       if (profile.error) toast.error(profile.error);
@@ -78,8 +82,9 @@ export default function PengaturanPage() {
       toast.error("Sesi habis, silakan login kembali");
       return;
     }
+    const previousPath = getAdminAvatarObjectPath(avatarUrl);
     const ext = file.name.split(".").pop() || "png";
-    const path = `${user.id}/avatar.${ext}`;
+    const path = `${user.id}/avatar-${Date.now()}.${ext}`;
     const { error } = await supabase.storage.from("admin-avatars").upload(path, file, { upsert: true });
     if (error) {
       toast.error("Gagal upload avatar");
@@ -87,7 +92,15 @@ export default function PengaturanPage() {
     }
     const { data } = supabase.storage.from("admin-avatars").getPublicUrl(path);
     setAvatarUrl(data.publicUrl);
+    setAvatarVersion(new Date().toISOString());
     profileForm.setValue("foto_url", data.publicUrl);
+
+    if (previousPath && previousPath !== path) {
+      const { error: removeError } = await supabase.storage.from("admin-avatars").remove([previousPath]);
+      if (removeError) {
+        console.error("admin avatar cleanup failed", removeError);
+      }
+    }
   };
 
   const saveProfile = async (values: ProfileForm) => {
@@ -95,7 +108,11 @@ export default function PengaturanPage() {
     const result = await updateAdminProfile(values);
     setProfileLoading(false);
     if (result.error) toast.error(result.error);
-    else toast.success("Profil admin disimpan");
+    else {
+      setAvatarVersion(result.data?.updated_at ?? new Date().toISOString());
+      router.refresh();
+      toast.success("Profil admin disimpan");
+    }
   };
 
   const saveSettings = async (values: SettingsForm) => {
@@ -121,7 +138,7 @@ export default function PengaturanPage() {
         <CardHeader title="Profil Admin" description="Data akun admin yang aktif pada panel web." />
         <CardContent className="space-y-6">
           <div className="flex items-center gap-4">
-            <Avatar name={profileForm.watch("nama_lengkap")} src={avatarUrl} size={64} />
+            <Avatar name={profileForm.watch("nama_lengkap")} src={avatarUrl} cacheKey={avatarVersion} size={64} />
             <label className="focus-ring inline-flex cursor-pointer items-center gap-2 rounded-md border border-navy px-4 py-2 text-sm font-semibold leading-5 text-navy hover:bg-navy-50">
               <Upload className="h-4 w-4" />
               Upload Avatar
@@ -184,4 +201,18 @@ export default function PengaturanPage() {
       </Card>
     </div>
   );
+}
+
+function getAdminAvatarObjectPath(publicUrl: string | null) {
+  if (!publicUrl) return null;
+
+  try {
+    const url = new URL(publicUrl);
+    const marker = "/storage/v1/object/public/admin-avatars/";
+    const markerIndex = url.pathname.indexOf(marker);
+    if (markerIndex === -1) return null;
+    return decodeURIComponent(url.pathname.slice(markerIndex + marker.length));
+  } catch {
+    return null;
+  }
 }

@@ -20,6 +20,7 @@ import com.google.android.material.textfield.TextInputLayout
 import coil.load
 import coil.transform.CircleCropTransformation
 import com.unihaz.tracerstudy.R
+import com.unihaz.tracerstudy.core.utils.AvatarUrlFormatter
 import com.unihaz.tracerstudy.core.utils.ValidationUtils
 import com.unihaz.tracerstudy.core.utils.showMessage
 import com.unihaz.tracerstudy.data.model.Alumni
@@ -100,7 +101,7 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
                 view.findViewById<TextView>(R.id.tvProfilePhone).text =
                     getString(R.string.profile_phone_format, alumni.noHp ?: getString(R.string.placeholder_dash))
                 view.findViewById<TextView>(R.id.tvProfileAngkatan).text = getString(R.string.profile_angkatan_format, alumni.angkatan)
-                profilePhoto.load(alumni.fotoUrl) {
+                profilePhoto.load(AvatarUrlFormatter.withVersion(alumni.fotoUrl, alumni.updatedAt)) {
                     placeholder(R.drawable.bg_avatar)
                     transformations(CircleCropTransformation())
                 }

@@ -8,14 +8,19 @@ const mocks = vi.hoisted(() => {
   const getUserById = vi.fn();
   const signInWithPassword = vi.fn();
   const signOut = vi.fn();
+  const consumeServerRateLimit = vi.fn(async (): Promise<{ limited: boolean; retryAfterSeconds?: number }> => ({ limited: false }));
 
   const query = { select, eq, maybeSingle };
   select.mockReturnValue(query);
   eq.mockReturnValue(query);
   from.mockReturnValue(query);
 
-  return { maybeSingle, eq, select, from, getUserById, signInWithPassword, signOut };
+  return { maybeSingle, eq, select, from, getUserById, signInWithPassword, signOut, consumeServerRateLimit };
 });
+
+vi.mock("next/headers", () => ({
+  headers: vi.fn(async () => new Headers({ "x-forwarded-for": "203.0.113.10" }))
+}));
 
 vi.mock("@/lib/supabase/server", () => ({
   createAdminClient: vi.fn(() => ({
@@ -28,6 +33,11 @@ vi.mock("@/lib/supabase/server", () => ({
       signOut: mocks.signOut
     }
   }))
+}));
+
+vi.mock("@/lib/server-rate-limit", () => ({
+  consumeServerRateLimit: mocks.consumeServerRateLimit,
+  getClientIp: vi.fn(() => "203.0.113.10")
 }));
 
 vi.mock("@/lib/actions/_utils", () => ({
@@ -66,5 +76,14 @@ describe("loginAdmin", () => {
       password: "secret123"
     });
     expect(mocks.signOut).not.toHaveBeenCalled();
+  });
+
+  it("stops login when the rate limit is exceeded", async () => {
+    mocks.consumeServerRateLimit.mockResolvedValueOnce({ limited: true, retryAfterSeconds: 120 });
+
+    const result = await loginAdmin({ npp: "198001012024011001", password: "secret123" });
+
+    expect(result.error).toBe("Terlalu banyak percobaan login. Coba lagi beberapa menit lagi.");
+    expect(mocks.signInWithPassword).not.toHaveBeenCalled();
   });
 });

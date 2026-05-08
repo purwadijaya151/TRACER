@@ -181,7 +181,7 @@ class AuthRepository private constructor(
             else -> true
         }
     }.getOrElse {
-        true
+        resolveSessionValidationFailure(getSession(), it)
     }
 
     fun getCurrentSession() = getSession()
@@ -330,6 +330,16 @@ class AuthRepository private constructor(
 
         private fun changePasswordFailure(message: String): Result<Unit> =
             Result.failure(IllegalStateException(message))
+
+        internal fun resolveSessionValidationFailure(session: Session?, throwable: Throwable): Boolean {
+            return when (throwable) {
+                is SSLException,
+                is UnknownHostException,
+                is SocketTimeoutException,
+                is IOException -> session != null
+                else -> false
+            }
+        }
     }
 }
 

@@ -13,6 +13,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.IOException
+import java.net.SocketTimeoutException
 
 class AuthRepositoryTest {
     @Test
@@ -155,5 +156,33 @@ class AuthRepositoryTest {
         assertFalse(nonNullMessage.contains("new-password"))
         assertFalse(nonNullMessage.contains("access-token"))
         assertFalse(nonNullMessage.contains("refresh-token"))
+    }
+
+    @Test
+    fun keepsSessionOnTransientNetworkValidationFailure() {
+        val result = AuthRepository.resolveSessionValidationFailure(
+            session = Session(
+                accessToken = "access-token-123",
+                refreshToken = "refresh-token-456",
+                alumniId = "alumni-id"
+            ),
+            throwable = SocketTimeoutException("timeout")
+        )
+
+        assertTrue(result)
+    }
+
+    @Test
+    fun rejectsSessionOnUnexpectedValidationFailure() {
+        val result = AuthRepository.resolveSessionValidationFailure(
+            session = Session(
+                accessToken = "access-token-123",
+                refreshToken = "refresh-token-456",
+                alumniId = "alumni-id"
+            ),
+            throwable = IllegalStateException("bad configuration")
+        )
+
+        assertFalse(result)
     }
 }

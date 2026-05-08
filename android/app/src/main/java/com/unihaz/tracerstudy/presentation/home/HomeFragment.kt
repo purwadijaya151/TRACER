@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.TextView
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import com.unihaz.tracerstudy.R
 import com.unihaz.tracerstudy.core.utils.showMessage
@@ -29,10 +30,16 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                 view.findViewById<TextView>(R.id.tvHomeGreeting).text = getString(R.string.home_greeting_format, alumni.namaLengkap)
                 view.findViewById<TextView>(R.id.tvHomeMeta).text = getString(R.string.home_meta_format, alumni.prodi, alumni.angkatan)
             }
-            view.findViewById<TextView>(R.id.tvUnreadBadge).text = String.format(Locale.getDefault(), "%d", state.unreadCount)
-            val submitted = state.tracerStudy?.isSubmitted == true
-            view.findViewById<TextView>(R.id.tvTracerStatus).text =
-                getString(if (submitted) R.string.tracer_status_submitted else R.string.tracer_status_not_submitted)
+            view.findViewById<TextView>(R.id.tvUnreadBadge).apply {
+                isVisible = state.unreadCount != null
+                text = String.format(Locale.getDefault(), "%d", state.unreadCount ?: 0)
+            }
+            val tracerStatusResId = when {
+                !state.tracerStatusKnown -> R.string.tracer_status_unavailable
+                state.tracerStudy?.isSubmitted == true -> R.string.tracer_status_submitted
+                else -> R.string.tracer_status_not_submitted
+            }
+            view.findViewById<TextView>(R.id.tvTracerStatus).text = getString(tracerStatusResId)
             state.error?.let(view::showMessage)
         }
     }

@@ -9,18 +9,20 @@ import { cn } from "@/lib/utils";
 export function DashboardShell({
   children,
   adminName,
-  adminPhoto
+  adminPhoto,
+  adminPhotoVersion
 }: {
   children: React.ReactNode;
   adminName?: string | null;
   adminPhoto?: string | null;
+  adminPhotoVersion?: string | null;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-navy-50">
       <div className="hidden fixed inset-y-0 left-0 z-40 w-[240px] lg:block">
-        <Sidebar adminName={adminName} adminPhoto={adminPhoto} />
+        <Sidebar adminName={adminName} adminPhoto={adminPhoto} adminPhotoVersion={adminPhotoVersion} />
       </div>
 
       <div
@@ -44,11 +46,11 @@ export function DashboardShell({
         >
           <X className="h-4 w-4" />
         </button>
-        <Sidebar adminName={adminName} adminPhoto={adminPhoto} onNavigate={() => setSidebarOpen(false)} />
+        <Sidebar adminName={adminName} adminPhoto={adminPhoto} adminPhotoVersion={adminPhotoVersion} onNavigate={() => setSidebarOpen(false)} />
       </div>
 
       <div className="lg:pl-[240px]">
-        <Header adminName={adminName} adminPhoto={adminPhoto} onMenuClick={() => setSidebarOpen(true)} />
+        <Header adminName={adminName} adminPhoto={adminPhoto} adminPhotoVersion={adminPhotoVersion} onMenuClick={() => setSidebarOpen(true)} />
         <main className="min-h-[calc(100vh-64px)] p-4 lg:p-6">{children}</main>
       </div>
     </div>

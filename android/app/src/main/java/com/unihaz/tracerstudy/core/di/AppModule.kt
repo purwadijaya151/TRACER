@@ -50,7 +50,14 @@ val appModule = module {
     viewModel { OnboardingViewModel(get()) }
     viewModel { LoginViewModel(loginUseCase = get(), resetPasswordUseCase = get()) }
     viewModel { RegisterViewModel(get()) }
-    viewModel { HomeViewModel(get(), get(), get(), get()) }
+    viewModel {
+        HomeViewModel(
+            sessionManager = get(),
+            getProfile = get(),
+            notificationRepository = get(),
+            tracerStudyRepository = get()
+        )
+    }
     viewModel { HistoryViewModel(sessionManager = get(), tracerStudyRepository = get()) }
     viewModel { TracerStudyViewModel(get(), get(), get(), get(), get()) }
     viewModel { ProfileViewModel(get(), get(), get(), get(), get(), get(), get()) }

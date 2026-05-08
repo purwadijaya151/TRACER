@@ -1,21 +1,26 @@
 import Image from "next/image";
+import { buildAvatarUrl } from "@/lib/avatar-url";
 import { cn, initials } from "@/lib/utils";
 
 export function Avatar({
   name,
   src,
+  cacheKey,
   className,
   size = 36
 }: {
   name?: string | null;
   src?: string | null;
+  cacheKey?: string | null;
   className?: string;
   size?: number;
 }) {
-  if (src) {
+  const resolvedSrc = buildAvatarUrl(src, cacheKey);
+
+  if (resolvedSrc) {
     return (
       <Image
-        src={src}
+        src={resolvedSrc}
         alt={name ?? "Avatar"}
         width={size}
         height={size}

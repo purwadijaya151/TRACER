@@ -14,10 +14,12 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 export function Header({
   adminName,
   adminPhoto,
+  adminPhotoVersion,
   onMenuClick
 }: {
   adminName?: string | null;
   adminPhoto?: string | null;
+  adminPhotoVersion?: string | null;
   onMenuClick: () => void;
 }) {
   const pathname = usePathname();
@@ -93,7 +95,7 @@ export function Header({
         </Popover>
         <HeadlessMenu as="div" className="relative border-l border-slate-100 pl-3">
           <MenuButton className="focus-ring flex items-center gap-2 rounded-md p-1 hover:bg-slate-100">
-            <Avatar name={adminName} src={adminPhoto} size={34} />
+            <Avatar name={adminName} src={adminPhoto} cacheKey={adminPhotoVersion} size={34} />
             <div className="hidden min-w-0 text-left sm:block">
               <p className="max-w-32 truncate text-sm font-semibold text-slate-900">{adminName ?? "Admin"}</p>
               <p className="text-sm leading-5 text-slate-600">Admin</p>

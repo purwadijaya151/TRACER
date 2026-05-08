@@ -5,8 +5,10 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.unihaz.tracerstudy.core.network.NetworkResult
+import com.unihaz.tracerstudy.data.local.Session
 import com.unihaz.tracerstudy.data.local.SessionManager
 import com.unihaz.tracerstudy.data.model.Alumni
+import com.unihaz.tracerstudy.data.model.Notification
 import com.unihaz.tracerstudy.data.model.TracerStudy
 import com.unihaz.tracerstudy.data.repository.NotificationRepository
 import com.unihaz.tracerstudy.data.repository.TracerStudyRepository
@@ -17,31 +19,49 @@ data class HomeUiState(
     val loading: Boolean = false,
     val alumni: Alumni? = null,
     val tracerStudy: TracerStudy? = null,
-    val unreadCount: Int = 0,
+    val tracerStatusKnown: Boolean = false,
+    val unreadCount: Int? = null,
     val error: String? = null
 )
 
-class HomeViewModel(
-    private val sessionManager: SessionManager,
-    private val getProfile: GetAlumniProfileUseCase,
-    private val notificationRepository: NotificationRepository,
-    private val tracerStudyRepository: TracerStudyRepository
+class HomeViewModel internal constructor(
+    private val getSession: () -> Session?,
+    private val loadProfile: suspend (String) -> NetworkResult<Alumni>,
+    private val loadNotifications: suspend (String) -> NetworkResult<List<Notification>>,
+    private val loadDraft: suspend (String) -> NetworkResult<TracerStudy?>
 ) : ViewModel() {
+    constructor(
+        sessionManager: SessionManager,
+        getProfile: GetAlumniProfileUseCase,
+        notificationRepository: NotificationRepository,
+        tracerStudyRepository: TracerStudyRepository
+    ) : this(
+        getSession = sessionManager::getSession,
+        loadProfile = getProfile::invoke,
+        loadNotifications = notificationRepository::getNotifications,
+        loadDraft = tracerStudyRepository::getDraft
+    )
+
     private val _state = MutableLiveData(HomeUiState())
     val state: LiveData<HomeUiState> = _state
 
     fun load() {
-        val session = sessionManager.getSession() ?: return
+        val session = getSession() ?: return
+        val current = _state.value ?: HomeUiState()
         viewModelScope.launch {
-            _state.value = HomeUiState(loading = true)
-            val profile = getProfile(session.alumniId)
-            val notifications = notificationRepository.getNotifications(session.alumniId)
-            val draft = tracerStudyRepository.getDraft(session.alumniId)
+            _state.value = current.copy(loading = true, error = null)
+            val profile = loadProfile(session.alumniId)
+            val notifications = loadNotifications(session.alumniId)
+            val draft = loadDraft(session.alumniId)
             _state.value = HomeUiState(
-                alumni = (profile as? NetworkResult.Success)?.data,
-                tracerStudy = (draft as? NetworkResult.Success)?.data,
-                unreadCount = (notifications as? NetworkResult.Success)?.data?.count { !it.isRead } ?: 0,
+                loading = false,
+                alumni = (profile as? NetworkResult.Success)?.data ?: current.alumni,
+                tracerStudy = (draft as? NetworkResult.Success)?.data ?: current.tracerStudy,
+                tracerStatusKnown = draft is NetworkResult.Success,
+                unreadCount = (notifications as? NetworkResult.Success)?.data?.count { !it.isRead } ?: current.unreadCount,
                 error = (profile as? NetworkResult.Error)?.message
+                    ?: (notifications as? NetworkResult.Error)?.message
+                    ?: (draft as? NetworkResult.Error)?.message
             )
         }
     }

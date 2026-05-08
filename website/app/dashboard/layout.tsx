@@ -12,14 +12,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const { data: profile } = await supabase
     .from("alumni")
-    .select("nama_lengkap,foto_url,is_admin")
+    .select("nama_lengkap,foto_url,updated_at,is_admin")
     .eq("id", user.id)
     .single();
 
   if (!profile?.is_admin) redirect("/login?error=admin");
 
   return (
-    <DashboardShell adminName={profile.nama_lengkap} adminPhoto={profile.foto_url}>
+    <DashboardShell adminName={profile.nama_lengkap} adminPhoto={profile.foto_url} adminPhotoVersion={profile.updated_at}>
       {children}
     </DashboardShell>
   );

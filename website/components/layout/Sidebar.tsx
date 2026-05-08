@@ -32,10 +32,12 @@ const navItems = [
 export function Sidebar({
   adminName,
   adminPhoto,
+  adminPhotoVersion,
   onNavigate
 }: {
   adminName?: string | null;
   adminPhoto?: string | null;
+  adminPhotoVersion?: string | null;
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
@@ -92,7 +94,13 @@ export function Sidebar({
 
       <div className="border-t border-white/10 p-4">
         <div className="mb-3 flex items-center gap-3 rounded-lg bg-white/5 p-3">
-          <Avatar name={adminName} src={adminPhoto} size={36} className="bg-white/15 text-white" />
+          <Avatar
+            name={adminName}
+            src={adminPhoto}
+            cacheKey={adminPhotoVersion}
+            size={36}
+            className="bg-white/15 text-white"
+          />
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold leading-5">{adminName ?? "Admin FT UNIHAZ"}</p>
             <p className="text-sm leading-5 text-white/80">Administrator</p>

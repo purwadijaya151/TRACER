@@ -65,7 +65,7 @@ export function AlumniTable({
     columnHelper.display({
       id: "avatar",
       header: "Avatar",
-      cell: ({ row }) => <Avatar name={row.original.nama_lengkap} src={row.original.foto_url} />
+      cell: ({ row }) => <Avatar name={row.original.nama_lengkap} src={row.original.foto_url} cacheKey={row.original.updated_at} />
     }),
     columnHelper.accessor("nim", { header: "NPM" }),
     columnHelper.accessor("nama_lengkap", {
