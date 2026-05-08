@@ -170,6 +170,45 @@ begin
 exception when duplicate_object then null;
 end $$;
 
+create table if not exists public.tracer_study_history (
+  id uuid primary key default uuid_generate_v4(),
+  source_tracer_study_id uuid references public.tracer_study(id) on delete set null,
+  alumni_id uuid references public.alumni(id) on delete cascade,
+  questionnaire_version varchar(40) not null default 'legacy-v1',
+  answers jsonb not null default '{}'::jsonb,
+  status_kerja public.status_kerja_type not null,
+  nama_perusahaan varchar(150),
+  bidang_pekerjaan varchar(100),
+  jabatan varchar(100),
+  rentang_gaji public.rentang_gaji_type,
+  provinsi_kerja varchar(100),
+  waktu_tunggu public.waktu_tunggu_type,
+  kesesuaian_bidang integer check (kesesuaian_bidang between 1 and 5),
+  nilai_hard_skill integer check (nilai_hard_skill between 1 and 5),
+  nilai_soft_skill integer check (nilai_soft_skill between 1 and 5),
+  nilai_bahasa_asing integer check (nilai_bahasa_asing between 1 and 5),
+  nilai_it integer check (nilai_it between 1 and 5),
+  nilai_kepemimpinan integer check (nilai_kepemimpinan between 1 and 5),
+  saran_kurikulum text,
+  kesan_kuliah text,
+  is_submitted boolean not null default true,
+  submitted_at timestamptz,
+  created_at timestamptz default now(),
+  recorded_at timestamptz default now()
+);
+
+alter table public.tracer_study_history add column if not exists source_tracer_study_id uuid references public.tracer_study(id) on delete set null;
+alter table public.tracer_study_history add column if not exists questionnaire_version varchar(40) not null default 'legacy-v1';
+alter table public.tracer_study_history add column if not exists answers jsonb not null default '{}'::jsonb;
+
+do $$
+begin
+  alter table public.tracer_study_history
+    add constraint tracer_study_history_answers_object
+    check (jsonb_typeof(answers) = 'object');
+exception when duplicate_object then null;
+end $$;
+
 create table if not exists public.questionnaire_questions (
   id uuid primary key default uuid_generate_v4(),
   questionnaire_version varchar(40) not null default 'launch-v1',
@@ -322,6 +361,59 @@ alter table public.password_reset_attempts enable row level security;
 revoke all on public.password_reset_attempts from public, anon, authenticated;
 grant select, insert, delete on public.password_reset_attempts to service_role;
 
+create or replace function public.consume_password_reset_rate_limit(
+  p_rate_keys text[],
+  p_window_seconds integer default 900,
+  p_max_attempts integer default 5
+)
+returns table(limited boolean, retry_after_seconds integer)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_window_seconds integer := greatest(p_window_seconds, 1);
+  v_max_attempts integer := greatest(p_max_attempts, 1);
+  v_cutoff timestamptz := now() - make_interval(secs => greatest(p_window_seconds, 1));
+  v_limited boolean;
+begin
+  if p_rate_keys is null or cardinality(p_rate_keys) = 0 then
+    raise exception 'rate_keys_required' using errcode = '22023';
+  end if;
+
+  perform pg_advisory_xact_lock(hashtextextended(keys.rate_key, 0))
+  from (
+    select distinct unnest(p_rate_keys) as rate_key
+    order by rate_key
+  ) keys;
+
+  delete from public.password_reset_attempts
+  where created_at < v_cutoff;
+
+  select exists (
+    select 1
+    from public.password_reset_attempts
+    where rate_key = any(p_rate_keys)
+      and created_at >= v_cutoff
+    group by rate_key
+    having count(*) >= v_max_attempts
+  ) into v_limited;
+
+  if v_limited then
+    return query select true, v_window_seconds;
+    return;
+  end if;
+
+  insert into public.password_reset_attempts (rate_key)
+  select distinct unnest(p_rate_keys);
+
+  return query select false, null::integer;
+end;
+$$;
+
+revoke all on function public.consume_password_reset_rate_limit(text[], integer, integer) from public, anon, authenticated;
+grant execute on function public.consume_password_reset_rate_limit(text[], integer, integer) to service_role;
+
 create or replace view public.admin_alumni_with_status
 with (security_invoker = true)
 as
@@ -344,6 +436,7 @@ create unique index if not exists alumni_npp_unique_idx on public.alumni(npp) wh
 create index if not exists alumni_admin_npp_idx on public.alumni(npp) where is_admin = true;
 create index if not exists tracer_study_status_idx on public.tracer_study(status_kerja, is_submitted);
 create index if not exists tracer_study_answers_gin_idx on public.tracer_study using gin (answers);
+create index if not exists tracer_study_history_alumni_submitted_idx on public.tracer_study_history(alumni_id, submitted_at desc, recorded_at desc);
 create unique index if not exists questionnaire_questions_version_code_idx on public.questionnaire_questions(questionnaire_version, code);
 create index if not exists questionnaire_questions_active_idx on public.questionnaire_questions(questionnaire_version, is_active, section_order, order_index);
 create index if not exists questionnaire_questions_options_gin_idx on public.questionnaire_questions using gin (options);
@@ -353,6 +446,7 @@ create index if not exists notification_broadcasts_created_idx on public.notific
 
 alter table public.alumni enable row level security;
 alter table public.tracer_study enable row level security;
+alter table public.tracer_study_history enable row level security;
 alter table public.questionnaire_questions enable row level security;
 alter table public.notifications enable row level security;
 alter table public.notification_broadcasts enable row level security;
@@ -465,6 +559,19 @@ drop policy if exists "Admin can view all tracer study" on public.tracer_study;
 create policy "Admin can view all tracer study"
 on public.tracer_study for select
 using (app_private.is_admin(auth.uid()));
+
+drop policy if exists "Alumni can view own tracer study history" on public.tracer_study_history;
+create policy "Alumni can view own tracer study history"
+on public.tracer_study_history for select
+using (auth.uid() = alumni_id);
+
+drop policy if exists "Admin can view all tracer study history" on public.tracer_study_history;
+create policy "Admin can view all tracer study history"
+on public.tracer_study_history for select
+using (app_private.is_admin(auth.uid()));
+
+grant select on public.tracer_study_history to authenticated;
+grant all on public.tracer_study_history to service_role;
 
 drop policy if exists "Authenticated can view active questionnaire questions" on public.questionnaire_questions;
 create policy "Authenticated can view active questionnaire questions"
@@ -584,6 +691,7 @@ with check (
 create or replace function public.update_updated_at()
 returns trigger
 language plpgsql
+set search_path = public
 as $$
 begin
   new.updated_at = now();
@@ -665,6 +773,79 @@ drop trigger if exists tracer_study_enforce_settings on public.tracer_study;
 create trigger tracer_study_enforce_settings
 before insert or update on public.tracer_study
 for each row execute function app_private.enforce_tracer_study_settings();
+
+create or replace function app_private.append_tracer_study_history()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.is_submitted is true and (
+    tg_op = 'INSERT'
+    or (
+      tg_op = 'UPDATE'
+      and (
+        old.is_submitted is distinct from true
+        or old.submitted_at is distinct from new.submitted_at
+      )
+    )
+  ) then
+    insert into public.tracer_study_history (
+      source_tracer_study_id,
+      alumni_id,
+      questionnaire_version,
+      answers,
+      status_kerja,
+      nama_perusahaan,
+      bidang_pekerjaan,
+      jabatan,
+      rentang_gaji,
+      provinsi_kerja,
+      waktu_tunggu,
+      kesesuaian_bidang,
+      nilai_hard_skill,
+      nilai_soft_skill,
+      nilai_bahasa_asing,
+      nilai_it,
+      nilai_kepemimpinan,
+      saran_kurikulum,
+      kesan_kuliah,
+      is_submitted,
+      submitted_at
+    ) values (
+      new.id,
+      new.alumni_id,
+      new.questionnaire_version,
+      new.answers,
+      new.status_kerja,
+      new.nama_perusahaan,
+      new.bidang_pekerjaan,
+      new.jabatan,
+      new.rentang_gaji,
+      new.provinsi_kerja,
+      new.waktu_tunggu,
+      new.kesesuaian_bidang,
+      new.nilai_hard_skill,
+      new.nilai_soft_skill,
+      new.nilai_bahasa_asing,
+      new.nilai_it,
+      new.nilai_kepemimpinan,
+      new.saran_kurikulum,
+      new.kesan_kuliah,
+      true,
+      new.submitted_at
+    );
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists tracer_study_append_history on public.tracer_study;
+create trigger tracer_study_append_history
+after insert or update on public.tracer_study
+for each row execute function app_private.append_tracer_study_history();
 
 create or replace function app_private.refresh_broadcast_read_count()
 returns trigger

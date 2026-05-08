@@ -17,9 +17,10 @@
     "seed:admin": "node scripts/create-admin.mjs",
     "seed:questions": "node scripts/seed-questionnaire.mjs",
     "qa:questionnaire": "node scripts/check-questionnaire-integration.mjs",
-    "supabase:link": "npx supabase link --project-ref efutimhekjhqrwmrzmew",
-    "supabase:push": "npx supabase db push --include-all",
-    "supabase:push:dry": "npx supabase db push --include-all --dry-run",
+    "qa:mobile-auth": "node scripts/check-mobile-auth-endpoints.mjs",
+    "supabase:link": "npx supabase link --project-ref ftyzjlmxoydjsevuekde",
+    "supabase:push": "npx supabase db push",
+    "supabase:push:dry": "npx supabase db push --dry-run",
     "e2e:admin": "node scripts/e2e-admin-smoke.mjs",
     "test": "vitest run",
     "test:watch": "vitest"

@@ -1,6 +1,6 @@
 # Supabase Remote Setup
 
-Project ref: `efutimhekjhqrwmrzmew`
+Project ref: `ftyzjlmxoydjsevuekde`
 
 Remote setup is managed by Supabase CLI from this `website` directory.
 

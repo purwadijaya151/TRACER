@@ -1,7 +1,6 @@
 "use server";
 
 import { alumniSchema, alumniUpdateSchema } from "@/lib/validation";
-import { INSTITUTION_EMAIL_DOMAIN } from "@/lib/constants";
 import {
   actionData,
   actionError,
@@ -11,6 +10,7 @@ import {
   requireAdmin,
   sanitizeText
 } from "@/lib/actions/_utils";
+import { nimToInstitutionEmail, normalizeNim } from "@/lib/alumni-nim";
 import { buildIlikeOrFilter } from "@/lib/postgrest";
 import type { Alumni, AlumniFilters, PaginatedResult, TracerStudy } from "@/types";
 
@@ -39,7 +39,7 @@ async function getAllRows<T>(
 
 function normalizeAlumniPayload(payload: Record<string, unknown>) {
   return {
-    nim: String(payload.nim),
+    nim: normalizeNim(String(payload.nim)),
     nama_lengkap: String(payload.nama_lengkap),
     prodi: String(payload.prodi),
     tahun_masuk: Number(payload.tahun_masuk),
@@ -55,7 +55,7 @@ function normalizeAlumniPayload(payload: Record<string, unknown>) {
 }
 
 function toAlumniAuthEmail(nim: string) {
-  return `${nim.trim().toLowerCase().replace(/\s+/g, "")}@${INSTITUTION_EMAIL_DOMAIN}`;
+  return nimToInstitutionEmail(nim);
 }
 
 async function assertNonAdminTarget(auth: Awaited<ReturnType<typeof requireAdmin>>, ids: string[], action = "diubah") {

@@ -15,7 +15,7 @@ describe("AlumniModal", () => {
     await userEvent.click(screen.getByRole("button", { name: /simpan/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/NPM harus 5-20 karakter/i)).toBeInTheDocument();
+      expect(screen.getByText(/NPM harus 5-20 digit/i)).toBeInTheDocument();
       expect(screen.getByText(/Nama wajib diisi/i)).toBeInTheDocument();
     });
   });

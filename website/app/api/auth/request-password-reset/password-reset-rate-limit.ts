@@ -29,39 +29,26 @@ export async function consumePasswordResetRateLimit({
     hashRateLimitKey(`ip:${getClientIp(request)}`),
     hashRateLimitKey(`account:${nim.toLowerCase()}:${email.toLowerCase()}`)
   ];
-  const cutoff = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
   const { data, error } = await admin
-    .from("password_reset_attempts")
-    .select("rate_key")
-    .in("rate_key", rateKeys)
-    .gte("created_at", cutoff);
+    .rpc("consume_password_reset_rate_limit", {
+      p_rate_keys: rateKeys,
+      p_window_seconds: Math.ceil(RATE_LIMIT_WINDOW_MS / 1000),
+      p_max_attempts: RATE_LIMIT_MAX_ATTEMPTS
+    })
+    .single();
 
   if (error) {
     throw error;
   }
 
-  const attemptsByKey = new Map<string, number>();
-
-  for (const attempt of data ?? []) {
-    const rateKey = attempt.rate_key;
-    attemptsByKey.set(rateKey, (attemptsByKey.get(rateKey) ?? 0) + 1);
-  }
-
-  const limited = rateKeys.some((rateKey) => (attemptsByKey.get(rateKey) ?? 0) >= RATE_LIMIT_MAX_ATTEMPTS);
+  const result = data as { limited?: boolean; retry_after_seconds?: number | null } | null;
+  const limited = result?.limited === true;
 
   if (limited) {
     return {
       limited: true,
-      retryAfterSeconds: Math.ceil(RATE_LIMIT_WINDOW_MS / 1000)
+      retryAfterSeconds: result?.retry_after_seconds ?? Math.ceil(RATE_LIMIT_WINDOW_MS / 1000)
     };
-  }
-
-  const { error: insertError } = await admin
-    .from("password_reset_attempts")
-    .insert(rateKeys.map((rate_key) => ({ rate_key })));
-
-  if (insertError) {
-    throw insertError;
   }
 
   return { limited: false };

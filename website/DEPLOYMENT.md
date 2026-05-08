@@ -51,7 +51,20 @@ Untuk Vercel preview, tambahkan redirect preview sesuai domain preview yang dipa
 Untuk build Android release, set:
 
 ```properties
-RESET_PASSWORD_API_URL=https://your-vercel-domain.vercel.app/api/auth/request-password-reset
+WEBSITE_BASE_URL=https://your-vercel-domain.vercel.app
+```
+
+Android akan menurunkan:
+
+- `/api/auth/register-alumni`
+- `/api/auth/request-password-reset`
+
+dari `WEBSITE_BASE_URL`. Bila perlu override manual, `REGISTER_API_URL` dan `RESET_PASSWORD_API_URL` masih didukung.
+
+Sebelum rilis APK, verifikasi endpoint mobile auth:
+
+```powershell
+npm.cmd run qa:mobile-auth -- https://your-vercel-domain.vercel.app
 ```
 
 Jangan pakai `localhost` atau `10.0.2.2` untuk APK yang dipasang di device fisik atau dibagikan ke user.

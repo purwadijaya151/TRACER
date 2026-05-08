@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
+import { buildNimLookupCandidates, isValidNim, nimToInstitutionEmail, normalizeNim } from "@/lib/alumni-nim";
 import { createAdminClient } from "@/lib/supabase/server";
 import { assertEnv } from "@/lib/utils";
 import { consumePasswordResetRateLimit } from "./password-reset-rate-limit";
 
-const INSTITUTION_EMAIL_DOMAIN = "ft.unihaz.ac.id";
 const SUCCESS_MESSAGE = "Jika NPM dan email cocok, link reset password akan dikirim ke email pribadi Anda.";
 const RATE_LIMIT_MESSAGE = "Terlalu banyak permintaan reset password. Coba lagi beberapa menit lagi.";
 const MIN_RESPONSE_MS = 1500;
@@ -37,10 +37,10 @@ export async function POST(request: Request) {
     );
   }
 
-  const nim = payload.nim?.trim();
+  const rawNim = payload.nim?.trim() ?? "";
   const email = payload.email?.trim().toLowerCase();
 
-  if (!nim || !email || !isValidNim(nim) || !isValidEmail(email)) {
+  if (!rawNim || !email || !isValidNim(rawNim) || !isValidEmail(email)) {
     return withMinimumResponseTime(
       NextResponse.json({ message: "NPM atau email tidak valid" }, { status: 400 }),
       startedAt
@@ -49,6 +49,7 @@ export async function POST(request: Request) {
 
   try {
     const admin = createAdminClient();
+    const nim = normalizeNim(rawNim);
     const rateLimit = await consumePasswordResetRateLimit({ admin, request, nim, email });
 
     if (rateLimit.limited) {
@@ -94,14 +95,13 @@ async function sendRecoveryEmailIfAccountMatches(
   const { data: alumni, error: alumniError } = await admin
     .from("alumni")
     .select("id,nim,nama_lengkap,email")
-    .eq("nim", nim)
-    .maybeSingle();
+    .in("nim", buildNimLookupCandidates(nim));
 
   if (alumniError) {
     throw alumniError;
   }
 
-  const matchedAlumni = alumni as AlumniResetRow | null;
+  const matchedAlumni = ((alumni as AlumniResetRow[] | null) ?? []).find((row) => isSameEmail(row.email, email));
 
   if (!matchedAlumni || !isSameEmail(matchedAlumni.email, email)) {
     return;
@@ -113,7 +113,7 @@ async function sendRecoveryEmailIfAccountMatches(
     throw authUserError;
   }
 
-  const authEmail = authUser.user?.email ?? `${matchedAlumni.nim.toLowerCase()}@${INSTITUTION_EMAIL_DOMAIN}`;
+  const authEmail = authUser.user?.email ?? nimToInstitutionEmail(matchedAlumni.nim);
   const redirectTo = getRedirectTo(request);
   const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
     type: "recovery",
@@ -180,10 +180,6 @@ function isVercelDeployment() {
 
 function isLocalRedirect(value: string) {
   return /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?(?:\/|$)/i.test(value);
-}
-
-function isValidNim(nim: string) {
-  return /^[0-9.]{5,20}$/.test(nim.trim());
 }
 
 function isValidEmail(email: string) {

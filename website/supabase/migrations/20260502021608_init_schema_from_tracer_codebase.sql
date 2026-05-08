@@ -1,0 +1,3 @@
+-- Baseline marker for the migrated Supabase project.
+-- The schema was initialized from website/supabase/schema.sql during remote project migration.
+-- Keep this file so local migration history recognizes the remote baseline version.

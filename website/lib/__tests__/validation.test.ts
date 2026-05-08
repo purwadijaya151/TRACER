@@ -39,6 +39,23 @@ describe("alumniSchema", () => {
     expect(result.success).toBe(true);
   });
 
+  it("normalizes 10 digit NPM to the dotted format used by Auth", () => {
+    const result = alumniSchema.safeParse({
+      nim: "2019010023",
+      nama_lengkap: "QA Dummy Alumni",
+      prodi: "Teknik Informatika",
+      tahun_masuk: 2021,
+      tahun_lulus: 2025,
+      email: "qa.contact@example.com",
+      password: "secret123"
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.nim).toBe("2019.01.0023");
+    }
+  });
+
   it("rejects alphanumeric QA codes that cannot be used by Android login", () => {
     const result = alumniSchema.safeParse({
       nim: "QAHV9LC601",
