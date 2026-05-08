@@ -1,18 +1,17 @@
 "use server";
 
 import { actionData, actionError, getRange, reportActionError, requireAdmin } from "@/lib/actions/_utils";
+import { buildTracerSummary, type TracerSummaryRow } from "@/lib/tracer-summary";
+import {
+  normalizeTracerStudyRow,
+  normalizeTracerStudyRows,
+  type TracerStudyRowWithJoinedAlumni
+} from "@/lib/tracer-study-row";
 import { reportFilterSchema, tracerStudyFilterSchema } from "@/lib/validation";
 import type { PaginatedResult, TracerStudy, TracerStudyFilters } from "@/types";
 
 type AdminContext = Extract<Awaited<ReturnType<typeof requireAdmin>>, { ok: true }>;
 const TRACER_EXPORT_BATCH_SIZE = 1000;
-
-type TracerSummaryRow = {
-  kesesuaian_bidang: number | null;
-  waktu_tunggu: string | null;
-  rentang_gaji: string | null;
-  alumni: { ipk: number | null } | Array<{ ipk: number | null }> | null;
-};
 type TracerQueryResult<T> = {
   data: T[] | null;
   error: { code?: string; message?: string; details?: string; hint?: string } | null;
@@ -35,7 +34,10 @@ export async function getTracerStudies(filters: TracerStudyFilters = {}, page = 
   const { from, to } = getRange(page, pageSize);
   let query = auth.adminClient
     .from("tracer_study")
-    .select("*, alumni!inner(nim,nama_lengkap,prodi,tahun_lulus,ipk,email,no_hp,is_admin)", { count: "exact" })
+    .select(
+      "id,alumni_id,questionnaire_version,status_kerja,rentang_gaji,kesesuaian_bidang,is_submitted,submitted_at,created_at,updated_at,alumni!inner(nim,nama_lengkap,prodi,tahun_lulus,ipk,email,no_hp,is_admin)",
+      { count: "exact" }
+    )
     .eq("is_submitted", true)
     .eq("alumni.is_admin", false)
     .order("submitted_at", { ascending: false, nullsFirst: false })
@@ -56,7 +58,7 @@ export async function getTracerStudies(filters: TracerStudyFilters = {}, page = 
   }
 
   return actionData({
-    rows: (data ?? []) as TracerStudy[],
+    rows: normalizeTracerStudyRows((data ?? []) as TracerStudyRowWithJoinedAlumni[]),
     total: count ?? 0,
     page,
     pageSize
@@ -95,26 +97,27 @@ export async function getTracerSummary(filters: TracerStudyFilters = {}) {
     }>("Gagal memuat ringkasan tracer study");
   }
 
-  const rows = rowsResult.rows;
+  return actionData(buildTracerSummary(rowsResult.rows));
+}
 
-  const avg = (values: Array<number | null | undefined>) => {
-    const valid = values.filter((value): value is number => typeof value === "number");
-    if (valid.length === 0) return 0;
-    return Number((valid.reduce((total, value) => total + value, 0) / valid.length).toFixed(2));
-  };
+export async function getTracerStudyDetail(id: string) {
+  const auth = await requireAdmin();
+  if (!auth.ok) return actionError<TracerStudy>(auth.error);
 
-  const mode = (values: Array<string | null | undefined>) => {
-    const counts = new Map<string, number>();
-    values.filter(Boolean).forEach((value) => counts.set(value as string, (counts.get(value as string) ?? 0) + 1));
-    return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "-";
-  };
+  const { data, error } = await auth.adminClient
+    .from("tracer_study")
+    .select("*, alumni!inner(nim,nama_lengkap,prodi,tahun_lulus,ipk,email,no_hp,is_admin)")
+    .eq("id", id)
+    .eq("is_submitted", true)
+    .eq("alumni.is_admin", false)
+    .single();
 
-  return actionData({
-    avg_ipk: avg(rows.map((row) => Array.isArray(row.alumni) ? row.alumni[0]?.ipk : row.alumni?.ipk)),
-    avg_kesesuaian: avg(rows.map((row) => row.kesesuaian_bidang)),
-    avg_waktu_tunggu: mode(rows.map((row) => row.waktu_tunggu)),
-    modal_gaji: mode(rows.map((row) => row.rentang_gaji))
-  });
+  if (error) {
+    reportActionError("tracerStudy.getTracerStudyDetail", error, { id });
+    return actionError<TracerStudy>("Gagal memuat detail tracer study");
+  }
+
+  return actionData(normalizeTracerStudyRow(data as TracerStudyRowWithJoinedAlumni));
 }
 
 async function getAllTracerSummaryRows(auth: AdminContext, filters: TracerStudyFilters) {
@@ -127,7 +130,6 @@ async function getAllTracerSummaryRows(auth: AdminContext, filters: TracerStudyF
       .select("kesesuaian_bidang,waktu_tunggu,rentang_gaji,submitted_at,alumni!inner(ipk,prodi,tahun_lulus,is_admin)")
       .eq("is_submitted", true)
       .eq("alumni.is_admin", false)
-      .order("submitted_at", { ascending: false, nullsFirst: false })
       .range(from, from + pageSize - 1);
 
     if (filters.prodi && filters.prodi !== "all") query = query.eq("alumni.prodi", filters.prodi);
@@ -195,5 +197,5 @@ export async function getTracerStudyExport(filters: unknown) {
     return actionError<TracerStudy[]>("Gagal mengambil data laporan");
   }
 
-  return actionData(result.rows);
+  return actionData(normalizeTracerStudyRows(result.rows as TracerStudyRowWithJoinedAlumni[]));
 }

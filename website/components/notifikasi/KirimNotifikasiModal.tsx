@@ -54,17 +54,28 @@ export function KirimNotifikasiModal({
     }),
     [watched.body, watched.prodi, watched.target, watched.tahunAkhir, watched.tahunMulai, watched.title]
   );
+  const recipientFilters = useMemo(
+    () => ({
+      target: watched.target,
+      prodi: watched.prodi,
+      tahunMulai: watched.tahunMulai,
+      tahunAkhir: watched.tahunAkhir
+    }),
+    [watched.prodi, watched.target, watched.tahunAkhir, watched.tahunMulai]
+  );
+  const titleError = typeof form.formState.errors.title?.message === "string" ? form.formState.errors.title.message : undefined;
+  const bodyError = typeof form.formState.errors.body?.message === "string" ? form.formState.errors.body.message : undefined;
 
   useEffect(() => {
     if (!open) return;
     const timer = window.setTimeout(async () => {
       setLoadingCount(true);
-      const result = await getRecipientCount(payload);
+      const result = await getRecipientCount(recipientFilters);
       setLoadingCount(false);
       if (!result.error) setRecipientCount(result.data ?? 0);
     }, 350);
     return () => window.clearTimeout(timer);
-  }, [open, payload]);
+  }, [open, recipientFilters]);
 
   const submit = async (values: FormValues) => {
     if (!confirming) {
@@ -106,8 +117,8 @@ export function KirimNotifikasiModal({
     >
       <form className="grid gap-6 lg:grid-cols-[1fr_280px]" onSubmit={form.handleSubmit(submit)}>
         <div className="space-y-4">
-          <Input label="Judul" error={form.formState.errors.title?.message} {...form.register("title")} />
-          <Textarea label="Pesan" error={form.formState.errors.body?.message} {...form.register("body")} />
+          <Input label="Judul" error={titleError} {...form.register("title")} />
+          <Textarea label="Pesan" error={bodyError} {...form.register("body")} />
 
           <div>
             <p className="mb-2 text-sm font-medium leading-5 text-slate-700">Target</p>
@@ -144,10 +155,10 @@ export function KirimNotifikasiModal({
                     type="checkbox"
                     checked={watched.prodi?.includes(item) ?? false}
                     onChange={(event) => {
-                      const current = watched.prodi ?? [];
+                      const current = watched.prodi ?? ([] as FormValues["prodi"]);
                       form.setValue(
                         "prodi",
-                        event.target.checked ? [...current, item] : current.filter((value) => value !== item)
+                        event.target.checked ? [...current, item] : current.filter((value: string) => value !== item)
                       );
                     }}
                   />

@@ -15,6 +15,7 @@ import { Pagination } from "@/components/ui/Pagination";
 import { Select } from "@/components/ui/Select";
 import { bulkDeleteAlumni, deleteAlumni, getAlumniExport } from "@/lib/actions/alumni.actions";
 import { PRODI_OPTIONS } from "@/lib/constants";
+import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 import { useAlumni } from "@/lib/hooks/useAlumni";
 import type { Alumni, AlumniFilters, ReportData } from "@/types";
 
@@ -41,15 +42,16 @@ function AlumniPageContent() {
     setSearch(nextSearch);
     setPage(1);
   }, [searchParams]);
+  const debouncedSearch = useDebouncedValue(search);
 
   const filters = useMemo<AlumniFilters>(
     () => ({
-      search,
+      search: debouncedSearch,
       prodi,
       tahun_lulus: tahunLulus === "all" ? "all" : Number(tahunLulus),
       status
     }),
-    [search, prodi, status, tahunLulus]
+    [debouncedSearch, prodi, status, tahunLulus]
   );
   const { data, loading, refresh } = useAlumni(filters, page, pageSize);
   const rows = data?.rows ?? [];

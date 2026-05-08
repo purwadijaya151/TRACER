@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import Image from "next/image";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -15,14 +15,18 @@ import { loginSchema } from "@/lib/validation";
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export function LoginForm() {
-  const router = useRouter();
   const params = useSearchParams();
   const [serverError, setServerError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { npp: "", password: "" }
   });
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   useEffect(() => {
     const error = params.get("error");
@@ -41,8 +45,7 @@ export function LoginForm() {
       return;
     }
 
-    router.replace("/dashboard");
-    router.refresh();
+    window.location.assign("/dashboard");
   };
 
   return (
@@ -62,7 +65,7 @@ export function LoginForm() {
         <p className="mt-2 text-[15px] leading-6 text-slate-600">Panel admin berbasis web</p>
       </div>
 
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form method="post" noValidate onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <Input
           label="NPP Admin"
           type="text"
@@ -91,7 +94,7 @@ export function LoginForm() {
         {serverError ? (
           <div className="rounded-md bg-red-50 p-3 text-sm font-medium text-red-700">{serverError}</div>
         ) : null}
-        <Button type="submit" className="w-full" loading={loading}>
+        <Button type="submit" className="w-full" loading={loading} disabled={!hydrated}>
           Masuk
         </Button>
       </form>

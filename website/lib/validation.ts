@@ -1,6 +1,5 @@
 import { z } from "zod";
 import {
-  NPM_REGEX,
   NPP_DIGIT_LENGTH,
   NPP_REGEX,
   QUESTIONNAIRE_DEFAULT_VERSION,
@@ -10,6 +9,7 @@ import {
   STATUS_KERJA_OPTIONS,
   WAKTU_TUNGGU_OPTIONS
 } from "@/lib/constants";
+import { isValidNim, normalizeNim } from "@/lib/alumni-nim";
 
 export const loginSchema = z.object({
   npp: z
@@ -23,7 +23,8 @@ export const alumniSchema = z.object({
   nim: z
     .string()
     .trim()
-    .regex(NPM_REGEX, "NPM harus 5-20 karakter dan hanya berisi angka atau titik"),
+    .refine(isValidNim, "NPM harus 5-20 digit dan hanya berisi angka atau titik")
+    .transform(normalizeNim),
   nama_lengkap: z.string().min(3, "Nama wajib diisi").max(100),
   prodi: z.enum(PRODI_OPTIONS as [string, ...string[]]),
   tahun_masuk: z.coerce.number().int().min(1980).max(2100),
@@ -40,16 +41,15 @@ export const alumniSchema = z.object({
 
 export const alumniUpdateSchema = alumniSchema.omit({ password: true });
 
-export const notificationSchema = z
-  .object({
-    title: z.string().min(3, "Judul wajib diisi").max(200),
-    body: z.string().min(5, "Pesan wajib diisi"),
-    target: z.enum(["all", "prodi", "tahun", "belum_mengisi"]),
-    prodi: z.array(z.enum(PRODI_OPTIONS as [string, ...string[]])).optional(),
-    tahunMulai: z.coerce.number().int().min(1980).max(2100).optional(),
-    tahunAkhir: z.coerce.number().int().min(1980).max(2100).optional()
-  })
-  .superRefine((data, ctx) => {
+const notificationTargetFieldsSchema = z.object({
+  target: z.enum(["all", "prodi", "tahun", "belum_mengisi"]),
+  prodi: z.array(z.enum(PRODI_OPTIONS as [string, ...string[]])).optional(),
+  tahunMulai: z.coerce.number().int().min(1980).max(2100).optional(),
+  tahunAkhir: z.coerce.number().int().min(1980).max(2100).optional()
+});
+
+function withNotificationTargetValidation<T extends z.ZodTypeAny>(schema: T) {
+  return schema.superRefine((data, ctx) => {
     if (data.target === "prodi" && !data.prodi?.length) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -77,6 +77,14 @@ export const notificationSchema = z
       }
     }
   });
+}
+
+export const notificationTargetSchema = withNotificationTargetValidation(notificationTargetFieldsSchema);
+
+export const notificationSchema = withNotificationTargetValidation(notificationTargetFieldsSchema.extend({
+  title: z.string().min(3, "Judul wajib diisi").max(200),
+  body: z.string().min(5, "Pesan wajib diisi")
+}));
 
 export const tracerStudyFilterSchema = z.object({
   prodi: z.enum(["all", ...PRODI_OPTIONS] as [string, ...string[]]).optional(),

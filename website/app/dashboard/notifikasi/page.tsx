@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/Input";
 import { Pagination } from "@/components/ui/Pagination";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { deleteNotifikasi } from "@/lib/actions/notifikasi.actions";
+import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 import { useNotifikasi } from "@/lib/hooks/useNotifikasi";
 import type { NotificationBroadcast, NotificationFilters } from "@/types";
 
@@ -22,7 +23,8 @@ export default function NotifikasiPage() {
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [deleting, setDeleting] = useState<NotificationBroadcast | null>(null);
-  const filters = useMemo<NotificationFilters>(() => ({ search }), [search]);
+  const debouncedSearch = useDebouncedValue(search);
+  const filters = useMemo<NotificationFilters>(() => ({ search: debouncedSearch }), [debouncedSearch]);
   const { data, stats, loading, refresh } = useNotifikasi(filters, page, pageSize);
 
   const confirmDelete = async () => {

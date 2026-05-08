@@ -22,14 +22,27 @@ export async function ensureDevServer({ baseUrl, appPath, timeoutMs = 90_000 }) 
     windowsHide: true
   });
 
-  await waitForServer(baseUrl, timeoutMs);
+  await waitForServer(baseUrl, timeoutMs, devServer);
   return devServer;
 }
 
-export async function waitForServer(baseUrl, timeoutMs = 90_000) {
+export async function waitForServer(baseUrl, timeoutMs = 90_000, processHandle = null) {
   const deadline = Date.now() + timeoutMs;
+  let exitCode = null;
+  let exitSignal = null;
+
+  processHandle?.once("exit", (code, signal) => {
+    exitCode = code;
+    exitSignal = signal;
+  });
+
   while (Date.now() < deadline) {
     if (await isServerReady(baseUrl)) return;
+    if (exitCode !== null || exitSignal !== null) {
+      throw new Error(
+        `Dev server berhenti sebelum siap di ${baseUrl} (code=${exitCode ?? "null"}, signal=${exitSignal ?? "null"})`
+      );
+    }
     await delay(1_000);
   }
   throw new Error(`Dev server tidak siap di ${baseUrl}`);

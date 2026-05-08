@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import net from "node:net";
 import { chromium } from "playwright";
 import { getAppDir, loadEnvFiles, requiredEnv } from "./lib/env.mjs";
 import { ensureDevServer, stopDevServer } from "./lib/next-dev-server.mjs";
@@ -6,9 +7,9 @@ import { ensureDevServer, stopDevServer } from "./lib/next-dev-server.mjs";
 const appPath = getAppDir(import.meta.url);
 const env = loadEnvFiles(appPath);
 
-const baseUrl = env.E2E_BASE_URL ?? "http://127.0.0.1:3000";
-const adminNpp = requiredEnv("ADMIN_NPP", env);
-const adminPassword = requiredEnv("ADMIN_PASSWORD", env);
+const baseUrl = env.E2E_BASE_URL ?? await findAvailableBaseUrl();
+const adminNpp = env.E2E_ADMIN_NPP?.trim() || requiredEnv("ADMIN_NPP", env);
+const adminPassword = env.E2E_ADMIN_PASSWORD?.trim() || requiredEnv("ADMIN_PASSWORD", env);
 const edgePath = env.E2E_EDGE_PATH ?? "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
 const routes = [
   "dashboard",
@@ -31,6 +32,31 @@ try {
   if (devServer) stopDevServer(devServer);
 }
 
+async function findAvailableBaseUrl(host = "127.0.0.1") {
+  const port = await findAvailablePort(host);
+  return `http://${host}:${port}`;
+}
+
+async function findAvailablePort(host) {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+
+    server.once("error", reject);
+    server.listen(0, host, () => {
+      const address = server.address();
+      if (!address || typeof address === "string") {
+        server.close(() => reject(new Error("Gagal menentukan port E2E lokal")));
+        return;
+      }
+
+      server.close((error) => {
+        if (error) reject(error);
+        else resolve(address.port);
+      });
+    });
+  });
+}
+
 async function runSmoke() {
   const launchOptions = fs.existsSync(edgePath) ? { executablePath: edgePath, headless: true } : { headless: true };
   const browser = await chromium.launch(launchOptions);
@@ -45,10 +71,15 @@ async function runSmoke() {
   });
 
   const loginResponse = await gotoAppPage(page, "login");
+  await page.getByRole("button", { name: "Masuk" }).waitFor({ state: "visible" });
+  await page.waitForFunction(() => {
+    const button = document.querySelector('button[type="submit"]');
+    return button instanceof HTMLButtonElement && !button.disabled;
+  }, null, { timeout: 30_000 });
   await page.getByLabel("NPP Admin").fill(adminNpp);
   await page.getByLabel("Password").fill(adminPassword);
   await page.getByRole("button", { name: "Masuk" }).click();
-  await page.waitForFunction(() => window.location.pathname.startsWith("/dashboard"), null, { timeout: 30_000 });
+  await page.waitForURL(/\/dashboard(?:[/?#]|$)/, { timeout: 30_000 });
   await page.waitForLoadState("networkidle", { timeout: 5_000 }).catch(() => null);
 
   const desktop = [];

@@ -10,25 +10,32 @@ export function useNotifikasi(filters: NotificationFilters, page: number, pageSi
   const [stats, setStats] = useState<{ total: number; read: number; unread: number } | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const refresh = useCallback(async () => {
+  const refreshRows = useCallback(async () => {
     setLoading(true);
-    const [rows, statResult] = await Promise.all([
-      getNotifications(filters, page, pageSize),
-      getNotificationStats()
-    ]);
+    const rows = await getNotifications(filters, page, pageSize);
 
     if (rows.error) toast.error(rows.error);
     else setData(rows.data);
-
-    if (statResult.error) toast.error(statResult.error);
-    else setStats(statResult.data);
-
     setLoading(false);
   }, [filters, page, pageSize]);
 
+  const refreshStats = useCallback(async () => {
+    const statResult = await getNotificationStats();
+    if (statResult.error) toast.error(statResult.error);
+    else setStats(statResult.data);
+  }, []);
+
+  const refresh = useCallback(async () => {
+    await Promise.all([refreshRows(), refreshStats()]);
+  }, [refreshRows, refreshStats]);
+
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    void refreshRows();
+  }, [refreshRows]);
+
+  useEffect(() => {
+    void refreshStats();
+  }, [refreshStats]);
 
   return { data, stats, loading, refresh };
 }

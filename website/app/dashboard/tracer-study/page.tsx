@@ -13,7 +13,7 @@ import { Select } from "@/components/ui/Select";
 import { getTracerStudyExport } from "@/lib/actions/tracer-study.actions";
 import { PRODI_OPTIONS, STATUS_KERJA_OPTIONS } from "@/lib/constants";
 import { useTracerStudy } from "@/lib/hooks/useTracerStudy";
-import type { TracerStudy, TracerStudyFilters } from "@/types";
+import type { TracerStudyFilters } from "@/types";
 
 const pageSize = 10;
 const LARGE_EXPORT_THRESHOLD = 1000;
@@ -24,7 +24,7 @@ export default function TracerStudyPage() {
   const [tahunLulus, setTahunLulus] = useState("all");
   const [statusKerja, setStatusKerja] = useState<TracerStudyFilters["status_kerja"]>("all");
   const [tahunPengisian, setTahunPengisian] = useState("all");
-  const [detail, setDetail] = useState<TracerStudy | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
 
   const filters = useMemo<TracerStudyFilters>(
@@ -114,12 +114,12 @@ export default function TracerStudyPage() {
             </div>
           ) : null}
 
-          <TracerStudyTable rows={data?.rows ?? []} loading={loading} onDetail={setDetail} />
+          <TracerStudyTable rows={data?.rows ?? []} loading={loading} onDetail={(row) => setDetailId(row.id)} />
         </CardContent>
         <Pagination page={page} pageSize={pageSize} total={data?.total ?? 0} onPageChange={setPage} />
       </Card>
 
-      <TracerStudyDetailModal row={detail} open={Boolean(detail)} onClose={() => setDetail(null)} />
+      <TracerStudyDetailModal tracerStudyId={detailId} open={Boolean(detailId)} onClose={() => setDetailId(null)} />
     </div>
   );
 }

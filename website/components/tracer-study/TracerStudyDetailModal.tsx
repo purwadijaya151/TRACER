@@ -1,8 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Tab, TabGroup, TabList, TabPanel, TabPanels } from "@headlessui/react";
 import { Modal } from "@/components/ui/Modal";
 import { StarRating } from "@/components/ui/StarRating";
+import { getTracerStudyDetail } from "@/lib/actions/tracer-study.actions";
 import {
   answerValue,
   optionLabel,
@@ -83,15 +86,80 @@ function QuestionAnswer({ question, answers }: { question: QuestionnaireQuestion
 const legacyTabs = ["Data Pribadi", "Data Pekerjaan", "Kompetensi", "Saran"];
 
 export function TracerStudyDetailModal({
-  row,
+  tracerStudyId,
   open,
   onClose
 }: {
-  row: TracerStudy | null;
+  tracerStudyId: string | null;
   open: boolean;
   onClose: () => void;
 }) {
-  if (!row) return null;
+  const [row, setRow] = useState<TracerStudy | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open || !tracerStudyId) {
+      if (!open) {
+        setRow(null);
+        setError(null);
+      }
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    setRow(null);
+    setError(null);
+
+    void (async () => {
+      const result = await getTracerStudyDetail(tracerStudyId);
+      if (cancelled) return;
+
+      if (result.error || !result.data) {
+        const message = result.error ?? "Gagal memuat detail tracer study";
+        toast.error(message);
+        setRow(null);
+        setError(message);
+      } else {
+        setRow(result.data);
+      }
+
+      setLoading(false);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, tracerStudyId]);
+
+  if (!open) return null;
+
+  if (loading) {
+    return (
+      <Modal open={open} onClose={onClose} title="Detail Tracer Study" size="xl">
+        <div className="space-y-3">
+          <div className="h-10 rounded-lg bg-slate-100" />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="h-20 rounded-lg bg-slate-100" />
+            <div className="h-20 rounded-lg bg-slate-100" />
+            <div className="h-20 rounded-lg bg-slate-100" />
+            <div className="h-20 rounded-lg bg-slate-100" />
+          </div>
+        </div>
+      </Modal>
+    );
+  }
+
+  if (error || !row) {
+    return (
+      <Modal open={open} onClose={onClose} title="Detail Tracer Study" size="xl">
+        <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+          {error ?? "Detail tracer study tidak tersedia."}
+        </div>
+      </Modal>
+    );
+  }
 
   const answers = (row.answers ?? {}) as AnswerMap;
   const displayTabs = row.answers ? [...legacyTabs, "Kuesioner Launch"] : legacyTabs;

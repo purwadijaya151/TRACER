@@ -10,7 +10,7 @@ import {
   requireAdmin
 } from "@/lib/actions/_utils";
 import { buildIlikeOrFilter } from "@/lib/postgrest";
-import { notificationSchema } from "@/lib/validation";
+import { notificationSchema, notificationTargetSchema } from "@/lib/validation";
 import type { NotificationBroadcast, NotificationFilters, PaginatedResult } from "@/types";
 
 type AdminContext = Extract<Awaited<ReturnType<typeof requireAdmin>>, { ok: true }>;
@@ -28,7 +28,7 @@ export async function getRecipientCount(input: unknown) {
   const auth = await requireAdmin();
   if (!auth.ok) return actionError<number>(auth.error);
 
-  const parsed = notificationSchema.safeParse(input);
+  const parsed = notificationTargetSchema.safeParse(input);
   if (!parsed.success) return actionError<number>(parsed.error.issues[0]?.message ?? "Target notifikasi tidak valid");
 
   const payload = parsed.data as BroadcastPayload;
