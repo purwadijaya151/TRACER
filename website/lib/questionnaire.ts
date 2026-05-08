@@ -1,4 +1,4 @@
-import { QUESTION_TYPE_LABELS } from "@/lib/constants";
+import { QUESTIONNAIRE_DEFAULT_VERSION, QUESTION_TYPE_LABELS } from "@/lib/constants";
 import type {
   QuestionChoiceOption,
   QuestionMatrixRow,
@@ -120,7 +120,7 @@ export function normalizeQuestionPayload(input: QuestionFormValues) {
   }
 
   return {
-    questionnaire_version: input.questionnaire_version.trim(),
+    questionnaire_version: QUESTIONNAIRE_DEFAULT_VERSION,
     code: input.code.trim(),
     section_id: input.section_id.trim(),
     section_title: input.section_title.trim(),

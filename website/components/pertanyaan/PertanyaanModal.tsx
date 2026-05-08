@@ -94,7 +94,7 @@ export function PertanyaanModal({
       <div className="grid gap-5 lg:grid-cols-[1fr_280px]">
         <div className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <Input label="Versi" value={values.questionnaire_version} onChange={(event) => setValue("questionnaire_version", event.target.value)} />
+            <Input label="Versi" value={QUESTIONNAIRE_DEFAULT_VERSION} readOnly disabled />
             <Input label="Urutan Section" type="number" value={values.section_order} onChange={(event) => setValue("section_order", Number(event.target.value || 1))} />
             <Input label="Urutan Pertanyaan" type="number" value={values.order_index} onChange={(event) => setValue("order_index", Number(event.target.value || 1))} />
             <Input label="Kode Pertanyaan" value={values.code} onChange={(event) => setValue("code", event.target.value)} placeholder="f8" />

@@ -23,7 +23,7 @@ describe("questionnaire helpers", () => {
 
   it("normalizes conditional logic and matrix metadata", () => {
     const payload = normalizeQuestionPayload({
-      questionnaire_version: "launch-v1",
+      questionnaire_version: "legacy-v1",
       code: "kompetensi",
       section_id: "kompetensi",
       section_title: "Kompetensi",
@@ -42,6 +42,7 @@ describe("questionnaire helpers", () => {
     });
 
     expect(payload.required_when).toEqual({ field: "f8", values: ["1", "3"] });
+    expect(payload.questionnaire_version).toBe("launch-v1");
     expect(payload.section_order).toBe(4);
     expect(payload.metadata).toEqual({ leftLabel: "A", rightLabel: "B" });
     expect(payload.options).toEqual({
