@@ -17,7 +17,7 @@ const reports = [
   {
     type: "tracer",
     title: "Laporan Tracer Study",
-    description: "Data pekerjaan, gaji, waktu tunggu, dan kesesuaian bidang.",
+    description: "Data pekerjaan, gaji, dan kesesuaian bidang.",
     icon: FileSpreadsheet
   },
   {

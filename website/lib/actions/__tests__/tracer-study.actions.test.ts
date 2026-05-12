@@ -4,15 +4,13 @@ function createSummaryBuilder() {
   let rangeFrom = 0;
   const firstBatch = Array.from({ length: 1000 }, () => ({
     kesesuaian_bidang: 0,
-    waktu_tunggu: "Cepat",
     rentang_gaji: "Rendah",
-    alumni: { ipk: 2 }
+    alumni: null
   }));
   const secondBatch = Array.from({ length: 1000 }, () => ({
     kesesuaian_bidang: 4,
-    waktu_tunggu: "Lama",
     rentang_gaji: "Tinggi",
-    alumni: { ipk: 4 }
+    alumni: null
   }));
 
   const query = {
@@ -64,9 +62,7 @@ describe("getTracerSummary", () => {
 
     expect(result.error).toBeNull();
     expect(result.data).toEqual({
-      avg_ipk: 3,
       avg_kesesuaian: 2,
-      avg_waktu_tunggu: "Cepat",
       modal_gaji: "Rendah"
     });
   });

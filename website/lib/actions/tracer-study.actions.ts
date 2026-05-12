@@ -69,9 +69,7 @@ export async function getTracerSummary(filters: TracerStudyFilters = {}) {
   const auth = await requireAdmin();
   if (!auth.ok) {
     return actionError<{
-      avg_ipk: number;
       avg_kesesuaian: number;
-      avg_waktu_tunggu: string;
       modal_gaji: string;
     }>(auth.error);
   }
@@ -79,9 +77,7 @@ export async function getTracerSummary(filters: TracerStudyFilters = {}) {
   const parsed = tracerStudyFilterSchema.safeParse(filters);
   if (!parsed.success) {
     return actionError<{
-      avg_ipk: number;
       avg_kesesuaian: number;
-      avg_waktu_tunggu: string;
       modal_gaji: string;
     }>("Filter tracer study tidak valid");
   }
@@ -90,9 +86,7 @@ export async function getTracerSummary(filters: TracerStudyFilters = {}) {
   if (!rowsResult.ok) {
     reportActionError("tracerStudy.getTracerSummary", rowsResult.error);
     return actionError<{
-      avg_ipk: number;
       avg_kesesuaian: number;
-      avg_waktu_tunggu: string;
       modal_gaji: string;
     }>("Gagal memuat ringkasan tracer study");
   }
@@ -127,7 +121,7 @@ async function getAllTracerSummaryRows(auth: AdminContext, filters: TracerStudyF
   for (let from = 0; ; from += pageSize) {
     let query = auth.adminClient
       .from("tracer_study")
-      .select("kesesuaian_bidang,waktu_tunggu,rentang_gaji,submitted_at,alumni!inner(ipk,prodi,tahun_lulus,is_admin)")
+      .select("kesesuaian_bidang,rentang_gaji,submitted_at,alumni!inner(prodi,tahun_lulus,is_admin)")
       .eq("is_submitted", true)
       .eq("alumni.is_admin", false)
       .range(from, from + pageSize - 1);

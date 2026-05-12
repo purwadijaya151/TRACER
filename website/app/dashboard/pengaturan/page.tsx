@@ -165,9 +165,9 @@ export default function PengaturanPage() {
           <div className="border-t border-slate-100 pt-6">
             <h3 className="font-heading text-lg font-semibold leading-7 text-slate-950">Ganti Password</h3>
             <form className="mt-4 space-y-4" onSubmit={passwordForm.handleSubmit(submitPassword)}>
-              <Input label="Password Lama" type="password" error={passwordForm.formState.errors.oldPassword?.message} {...passwordForm.register("oldPassword")} />
-              <Input label="Password Baru" type="password" error={passwordForm.formState.errors.newPassword?.message} {...passwordForm.register("newPassword")} />
-              <Input label="Konfirmasi Password" type="password" error={passwordForm.formState.errors.confirmPassword?.message} {...passwordForm.register("confirmPassword")} />
+              <Input label="Password Lama" type="password" allowPasswordToggle error={passwordForm.formState.errors.oldPassword?.message} {...passwordForm.register("oldPassword")} />
+              <Input label="Password Baru" type="password" allowPasswordToggle error={passwordForm.formState.errors.newPassword?.message} {...passwordForm.register("newPassword")} />
+              <Input label="Konfirmasi Password" type="password" allowPasswordToggle error={passwordForm.formState.errors.confirmPassword?.message} {...passwordForm.register("confirmPassword")} />
               <Button type="submit" variant="secondary">Ganti Password</Button>
             </form>
           </div>

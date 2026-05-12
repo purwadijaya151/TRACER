@@ -6,28 +6,20 @@ describe("tracer summary helpers", () => {
     const result = buildTracerSummary([
       {
         kesesuaian_bidang: 4,
-        waktu_tunggu: "Kurang dari 3 bulan",
-        rentang_gaji: "Rp 2.000.000 - Rp 5.000.000",
-        alumni: { ipk: 3.5 }
+        rentang_gaji: "Rp 2.000.000 - Rp 5.000.000"
       },
       {
         kesesuaian_bidang: 2,
-        waktu_tunggu: "Kurang dari 3 bulan",
-        rentang_gaji: "Rp 2.000.000 - Rp 5.000.000",
-        alumni: [{ ipk: 3.1 }]
+        rentang_gaji: "Rp 2.000.000 - Rp 5.000.000"
       },
       {
         kesesuaian_bidang: null,
-        waktu_tunggu: "3 - 6 bulan",
-        rentang_gaji: null,
-        alumni: null
+        rentang_gaji: null
       }
     ]);
 
     expect(result).toEqual({
-      avg_ipk: 3.3,
       avg_kesesuaian: 3,
-      avg_waktu_tunggu: "Kurang dari 3 bulan",
       modal_gaji: "Rp 2.000.000 - Rp 5.000.000"
     });
   });
