@@ -120,4 +120,27 @@ describe("POST /api/auth/register-alumni", () => {
     });
     expect(mocks.createUser).not.toHaveBeenCalled();
   });
+
+  it("attempts auth rollback when profile upsert fails", async () => {
+    mocks.upsert.mockResolvedValueOnce({ error: { message: "db failed" } });
+
+    const response = await POST(
+      new Request("https://example.test/api/auth/register-alumni", {
+        method: "POST",
+        body: JSON.stringify({
+          nim: "2019.01.0023",
+          password: "secret123",
+          nama_lengkap: "Alumni Test",
+          prodi: "Teknik Informatika",
+          tahun_masuk: 2019,
+          tahun_lulus: 2023,
+          email: "alumni@example.com"
+        })
+      })
+    );
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({ message: "Gagal menyimpan data alumni" });
+    expect(mocks.deleteUser).toHaveBeenCalledWith("user-1");
+  });
 });

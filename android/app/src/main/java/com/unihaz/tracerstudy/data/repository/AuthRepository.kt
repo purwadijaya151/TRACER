@@ -178,7 +178,7 @@ class AuthRepository private constructor(
                 userId = session.alumniId
             )
             response.status.value == 401 || response.status.value == 403 -> refreshSession(session.refreshToken)
-            else -> true
+            else -> false
         }
     }.getOrElse {
         resolveSessionValidationFailure(getSession(), it)
@@ -228,7 +228,7 @@ class AuthRepository private constructor(
                     clearSession()
                     false
                 } else {
-                    true
+                    false
                 }
             }
             NetworkResult.Loading -> true

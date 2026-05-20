@@ -90,8 +90,9 @@ class QuestionnaireStepFragment : Fragment() {
         val context = requireContext()
         val wrapper = blockWrapper()
         wrapper.addView(labelView(requiredLabel(question)))
+        val inputHint = question.suffix?.takeIf { it.isNotBlank() }?.let { "Isi dalam $it" } ?: "Isi jawaban"
         val layout = TextInputLayout(context).apply {
-            hint = question.suffix?.takeIf { it.isNotBlank() }?.let { "Isi dalam $it" } ?: "Isi jawaban"
+            isHintEnabled = false
             suffixText = question.suffix
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -99,6 +100,7 @@ class QuestionnaireStepFragment : Fragment() {
             )
         }
         val input = TextInputEditText(context).apply {
+            hint = inputHint
             setText(answers[question.id].orEmpty())
             inputType = when (question.inputType) {
                 TextQuestionType.Number -> InputType.TYPE_CLASS_NUMBER

@@ -113,7 +113,12 @@ export async function POST(request: Request) {
     );
 
   if (profileError) {
-    await admin.auth.admin.deleteUser(authUser.user.id);
+    const { error: rollbackError } = await admin.auth.admin.deleteUser(authUser.user.id);
+    if (rollbackError) {
+      console.error("register-alumni auth rollback failed", rollbackError, {
+        userId: authUser.user.id
+      });
+    }
     console.error("register-alumni profile upsert failed", profileError);
     return NextResponse.json({ message: "Gagal menyimpan data alumni" }, { status: 500 });
   }

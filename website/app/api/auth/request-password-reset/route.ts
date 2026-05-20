@@ -4,6 +4,7 @@ import { buildNimLookupCandidates, isValidNim, nimToInstitutionEmail, normalizeN
 import { createAdminClient } from "@/lib/supabase/server";
 import { assertEnv } from "@/lib/utils";
 import { consumePasswordResetRateLimit } from "./password-reset-rate-limit";
+import { resolvePasswordResetRedirectTo } from "./reset-password-redirect";
 
 const SUCCESS_MESSAGE = "Jika NPM dan email cocok, kami akan mencoba mengirim link reset password. Jika email belum masuk dalam beberapa menit, coba lagi atau hubungi admin.";
 const RATE_LIMIT_MESSAGE = "Terlalu banyak permintaan reset password. Coba lagi beberapa menit lagi.";
@@ -23,6 +24,11 @@ type AlumniResetRow = {
   nim: string;
   nama_lengkap?: string | null;
   email?: string | null;
+};
+
+type PasswordResetDeliveryContext = {
+  transporter: nodemailer.Transporter;
+  redirectTo: string;
 };
 
 export async function POST(request: Request) {
@@ -68,12 +74,28 @@ export async function POST(request: Request) {
       );
     }
 
-    assertPasswordResetDeliveryConfigured();
+    const deliveryContext = await buildPasswordResetDeliveryContext(request);
 
     try {
-      await sendRecoveryEmailIfAccountMatches(admin, request, nim, email);
+      await sendRecoveryEmailIfAccountMatches(admin, deliveryContext, nim, email);
     } catch (error) {
+      if (error instanceof PasswordResetDeliveryError) {
+        return withMinimumResponseTime(
+          NextResponse.json(
+            { message: SERVICE_UNAVAILABLE_MESSAGE },
+            { status: 503 }
+          ),
+          startedAt
+        );
+      }
       console.error("Password reset delivery failed", error);
+      return withMinimumResponseTime(
+        NextResponse.json(
+          { message: SERVICE_UNAVAILABLE_MESSAGE },
+          { status: 503 }
+        ),
+        startedAt
+      );
     }
 
     return withMinimumResponseTime(NextResponse.json({ message: SUCCESS_MESSAGE }), startedAt);
@@ -91,7 +113,7 @@ export async function POST(request: Request) {
 
 async function sendRecoveryEmailIfAccountMatches(
   admin: SupabaseAdminClient,
-  request: Request,
+  deliveryContext: PasswordResetDeliveryContext,
   nim: string,
   email: string
 ) {
@@ -117,24 +139,24 @@ async function sendRecoveryEmailIfAccountMatches(
   }
 
   const authEmail = authUser.user?.email ?? nimToInstitutionEmail(matchedAlumni.nim);
-  const redirectTo = getRedirectTo(request);
   const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
     type: "recovery",
     email: authEmail,
-    options: redirectTo ? { redirectTo } : undefined
+    options: deliveryContext.redirectTo ? { redirectTo: deliveryContext.redirectTo } : undefined
   });
 
   if (linkError) {
-    throw linkError;
+    throw new PasswordResetDeliveryError(linkError);
   }
 
   const resetLink = linkData.properties?.action_link;
 
   if (!resetLink) {
-    throw new Error("Supabase tidak mengembalikan link reset password");
+    throw new PasswordResetDeliveryError(new Error("Supabase tidak mengembalikan link reset password"));
   }
 
   await sendResetPasswordEmail({
+    transporter: deliveryContext.transporter,
     to: email,
     name: matchedAlumni.nama_lengkap,
     resetLink
@@ -150,39 +172,6 @@ async function withMinimumResponseTime(response: NextResponse, startedAt: number
   }
 
   return response;
-}
-
-function getRedirectTo(request: Request) {
-  const configuredRedirect = process.env.PASSWORD_RESET_REDIRECT_TO?.trim();
-  const derivedRedirect = buildResetPasswordUrl(request);
-
-  if (!configuredRedirect) {
-    return derivedRedirect;
-  }
-
-  if (isVercelDeployment() && isLocalRedirect(configuredRedirect)) {
-    return derivedRedirect;
-  }
-
-  return configuredRedirect;
-}
-
-function buildResetPasswordUrl(request: Request) {
-  const vercelUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
-
-  if (vercelUrl?.trim()) {
-    return `https://${vercelUrl.trim().replace(/^https?:\/\//, "").replace(/\/$/, "")}/reset-password`;
-  }
-
-  return `${new URL(request.url).origin}/reset-password`;
-}
-
-function isVercelDeployment() {
-  return process.env.VERCEL === "1" || Boolean(process.env.VERCEL_URL);
-}
-
-function isLocalRedirect(value: string) {
-  return /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?(?:\/|$)/i.test(value);
 }
 
 function isValidEmail(email: string) {
@@ -201,15 +190,10 @@ function assertPasswordResetDeliveryConfigured() {
   assertEnv("MAIL_FROM");
 }
 
-async function sendResetPasswordEmail({
-  to,
-  name,
-  resetLink
-}: {
-  to: string;
-  name?: string | null;
-  resetLink: string;
-}) {
+async function buildPasswordResetDeliveryContext(request: Request): Promise<PasswordResetDeliveryContext> {
+  assertPasswordResetDeliveryConfigured();
+
+  const redirectTo = resolvePasswordResetRedirectTo(request);
   const transporter = nodemailer.createTransport({
     host: assertEnv("SMTP_HOST"),
     port: Number(assertEnv("SMTP_PORT")),
@@ -220,6 +204,22 @@ async function sendResetPasswordEmail({
     }
   });
 
+  await transporter.verify();
+
+  return { transporter, redirectTo };
+}
+
+async function sendResetPasswordEmail({
+  transporter,
+  to,
+  name,
+  resetLink
+}: {
+  transporter: nodemailer.Transporter;
+  to: string;
+  name?: string | null;
+  resetLink: string;
+}) {
   const displayName = name?.trim() || "Alumni";
 
   await transporter.sendMail({
@@ -253,4 +253,12 @@ function escapeHtml(value: string) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+class PasswordResetDeliveryError extends Error {
+  constructor(cause: unknown) {
+    super("Password reset delivery failed");
+    this.name = "PasswordResetDeliveryError";
+    this.cause = cause;
+  }
 }

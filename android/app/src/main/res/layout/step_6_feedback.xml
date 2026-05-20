@@ -14,11 +14,12 @@
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Saran untuk pengembangan kurikulum">
+            app:hintEnabled="false">
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etSaranKurikulum"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:hint="Saran untuk pengembangan kurikulum"
                 android:inputType="textMultiLine"
                 android:lines="4" />
         </com.google.android.material.textfield.TextInputLayout>
@@ -27,11 +28,12 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_md"
-            android:hint="Kesan selama berkuliah">
+            app:hintEnabled="false">
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etKesanKuliah"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:hint="Kesan selama berkuliah"
                 android:inputType="textMultiLine"
                 android:lines="3" />
         </com.google.android.material.textfield.TextInputLayout>
