@@ -32,11 +32,18 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
         view.findViewById<TextView>(R.id.tvBackLogin).setOnClickListener { (activity as? AuthActivity)?.showLogin() }
         val register = view.findViewById<MaterialButton>(R.id.btnRegister)
         register.setOnClickListener {
+            val ipk = view.findViewById<TextInputEditText>(R.id.etRegisterIpk)
+                .text
+                ?.toString()
+                ?.trim()
+                ?.replace(',', '.')
+                ?.toDoubleOrNull()
             viewModel.register(
                 nim = view.findViewById<TextInputEditText>(R.id.etRegisterNim).text?.toString().orEmpty(),
                 nama = view.findViewById<TextInputEditText>(R.id.etRegisterNama).text?.toString().orEmpty(),
                 prodi = prodi.text?.toString().orEmpty(),
                 tahunLulus = tahun.text?.toString()?.toIntOrNull() ?: currentYear,
+                ipk = ipk,
                 email = view.findViewById<TextInputEditText>(R.id.etRegisterEmail).text?.toString().orEmpty(),
                 password = view.findViewById<TextInputEditText>(R.id.etRegisterPassword).text?.toString().orEmpty(),
                 confirmPassword = view.findViewById<TextInputEditText>(R.id.etRegisterConfirm).text?.toString().orEmpty()

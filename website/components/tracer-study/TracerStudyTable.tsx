@@ -13,6 +13,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyTableRow, Table, Td, Th } from "@/components/ui/Table";
 import { TableSkeleton } from "@/components/ui/Skeleton";
+import { getTracerMonthlyIncomeDisplay } from "@/lib/tracer-study-display";
 import { formatDate } from "@/lib/utils";
 import type { TracerStudy } from "@/types";
 
@@ -47,7 +48,11 @@ export function TracerStudyTable({
       header: "Status Kerja",
       cell: ({ getValue }) => <Badge variant="info">{getValue()}</Badge>
     }),
-    columnHelper.accessor("rentang_gaji", { header: "Gaji", cell: ({ getValue }) => getValue() ?? "-" }),
+    columnHelper.display({
+      id: "gaji",
+      header: "Gaji",
+      cell: ({ row }) => getTracerMonthlyIncomeDisplay(row.original) ?? "-"
+    }),
     columnHelper.accessor("kesesuaian_bidang", { header: "Kesesuaian", cell: ({ getValue }) => getValue() ?? "-" }),
     columnHelper.accessor("submitted_at", { header: "Submit", cell: ({ getValue }) => formatDate(getValue()) })
   ];

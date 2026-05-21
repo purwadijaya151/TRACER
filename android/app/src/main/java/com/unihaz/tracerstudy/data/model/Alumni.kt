@@ -32,5 +32,6 @@ data class AlumniRegisterPayload(
     val prodi: String,
     @SerialName("tahun_masuk") val tahunMasuk: Int,
     @SerialName("tahun_lulus") val tahunLulus: Int,
+    val ipk: Double,
     val email: String
 )

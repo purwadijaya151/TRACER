@@ -101,6 +101,7 @@ class AuthRepository private constructor(
                         prodi = alumniData.prodi,
                         tahunMasuk = alumniData.tahunMasuk,
                         tahunLulus = alumniData.tahunLulus,
+                        ipk = alumniData.ipk,
                         email = alumniData.email
                     )
                 )
@@ -367,6 +368,7 @@ private data class RegisterAlumniRequest(
     val prodi: String,
     @SerialName("tahun_masuk") val tahunMasuk: Int,
     @SerialName("tahun_lulus") val tahunLulus: Int,
+    val ipk: Double,
     val email: String
 )
 

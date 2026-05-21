@@ -14,6 +14,15 @@ import {
   type AnswerMap,
   type QuestionnaireQuestion
 } from "@/lib/questionnaire/tracer-study-launch";
+import {
+  getTracerCityDisplay,
+  getTracerCompanyDisplay,
+  getTracerMonthlyIncomeDisplay,
+  getTracerPositionDisplay,
+  getTracerProvinceDisplay,
+  getTracerWaitTimeDisplay,
+  getTracerWorkplaceLevelDisplay
+} from "@/lib/tracer-study-display";
 import { cn } from "@/lib/utils";
 import type { TracerStudy } from "@/types";
 
@@ -82,8 +91,6 @@ function QuestionAnswer({ question, answers }: { question: QuestionnaireQuestion
   const value = answerValue(answers, question.id);
   return <Field label={question.label} value={value ? `${value}${question.suffix ? ` ${question.suffix}` : ""}` : "-"} />;
 }
-
-const legacyTabs = ["Data Pribadi", "Data Pekerjaan", "Kompetensi", "Saran"];
 
 export function TracerStudyDetailModal({
   tracerStudyId,
@@ -162,15 +169,104 @@ export function TracerStudyDetailModal({
   }
 
   const answers = (row.answers ?? {}) as AnswerMap;
-  const displayTabs = row.answers ? [...legacyTabs, "Kuesioner Launch"] : legacyTabs;
+  const display = {
+    city: getTracerCityDisplay(row),
+    company: getTracerCompanyDisplay(row),
+    position: getTracerPositionDisplay(row),
+    province: getTracerProvinceDisplay(row),
+    monthlyIncome: getTracerMonthlyIncomeDisplay(row),
+    waitTime: getTracerWaitTimeDisplay(row),
+    workplaceLevel: getTracerWorkplaceLevelDisplay(row)
+  };
+  const hasQuestionnaireAnswers = Boolean(row.answers && Object.keys(row.answers).length > 0);
+  const suggestionRows = [
+    { label: "Saran Kurikulum", value: row.saran_kurikulum },
+    { label: "Kesan Kuliah", value: row.kesan_kuliah }
+  ].filter((item) => item.value);
+  const tabs = [
+    {
+      label: "Data Pribadi",
+      content: (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="NPM" value={row.alumni?.nim} />
+          <Field label="Nama" value={row.alumni?.nama_lengkap} />
+          <Field label="Prodi" value={row.alumni?.prodi} />
+          <Field label="Tahun Lulus" value={row.alumni?.tahun_lulus} />
+          <Field label="IPK" value={row.alumni?.ipk} />
+          <Field label="Email" value={row.alumni?.email} />
+        </div>
+      )
+    },
+    {
+      label: "Data Pekerjaan",
+      content: (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Status Kerja" value={row.status_kerja} />
+          <Field label="Perusahaan / Usaha" value={display.company} />
+          <Field label="Pendapatan per Bulan" value={display.monthlyIncome} />
+          <Field label="Waktu Tunggu" value={display.waitTime} />
+          <Field label="Provinsi Kerja" value={display.province} />
+          <Field label="Kota/Kabupaten Kerja" value={display.city} />
+          <Field label="Tingkat Tempat Kerja" value={display.workplaceLevel} />
+          <Field label="Posisi/Jabatan Wirausaha" value={display.position} />
+        </div>
+      )
+    },
+    {
+      label: "Kompetensi",
+      content: (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Kesesuaian Bidang" value={<StarRating value={row.kesesuaian_bidang} />} />
+          <Field label="Hard Skill" value={<StarRating value={row.nilai_hard_skill} />} />
+          <Field label="Soft Skill" value={<StarRating value={row.nilai_soft_skill} />} />
+          <Field label="Bahasa Asing" value={<StarRating value={row.nilai_bahasa_asing} />} />
+          <Field label="IT" value={<StarRating value={row.nilai_it} />} />
+          <Field label="Kepemimpinan" value={<StarRating value={row.nilai_kepemimpinan} />} />
+        </div>
+      )
+    }
+  ];
+
+  if (suggestionRows.length > 0) {
+    tabs.push({
+      label: "Saran",
+      content: (
+        <div className="space-y-4">
+          {suggestionRows.map((item) => (
+            <Field key={item.label} label={item.label} value={item.value} />
+          ))}
+        </div>
+      )
+    });
+  }
+
+  if (hasQuestionnaireAnswers) {
+    tabs.push({
+      label: "Kuesioner Launch",
+      content: (
+        <div className="space-y-8">
+          {questionnaireSections.map((section) => (
+            <section key={section.id}>
+              <h3 className="font-heading text-lg font-semibold leading-7 text-slate-900">{section.title}</h3>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                {section.questions.map((question) => (
+                  <QuestionAnswer key={question.id} question={question} answers={answers} />
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )
+    });
+  }
 
   return (
     <Modal open={open} onClose={onClose} title="Detail Tracer Study" size="xl">
       <TabGroup>
         <TabList className="mb-5 flex flex-wrap gap-2 border-b border-slate-100 pb-3">
-          {displayTabs.map((tab) => (
+          {tabs.map((tab) => (
             <Tab
-              key={tab}
+              key={tab.label}
               className={({ selected }) =>
                 cn(
                   "focus-ring rounded-md px-3 py-2 text-sm font-semibold",
@@ -178,54 +274,14 @@ export function TracerStudyDetailModal({
                 )
               }
             >
-              {tab}
+              {tab.label}
             </Tab>
           ))}
         </TabList>
         <TabPanels>
-          <TabPanel className="grid gap-4 sm:grid-cols-2">
-            <Field label="NPM" value={row.alumni?.nim} />
-            <Field label="Nama" value={row.alumni?.nama_lengkap} />
-            <Field label="Prodi" value={row.alumni?.prodi} />
-            <Field label="Tahun Lulus" value={row.alumni?.tahun_lulus} />
-            <Field label="IPK" value={row.alumni?.ipk} />
-            <Field label="Email" value={row.alumni?.email} />
-          </TabPanel>
-          <TabPanel className="grid gap-4 sm:grid-cols-2">
-            <Field label="Status Kerja" value={row.status_kerja} />
-            <Field label="Perusahaan" value={row.nama_perusahaan} />
-            <Field label="Bidang" value={row.bidang_pekerjaan} />
-            <Field label="Jabatan" value={row.jabatan} />
-            <Field label="Gaji" value={row.rentang_gaji} />
-            <Field label="Provinsi" value={row.provinsi_kerja} />
-            <Field label="Waktu Tunggu" value={row.waktu_tunggu} />
-          </TabPanel>
-          <TabPanel className="grid gap-4 sm:grid-cols-2">
-            <Field label="Kesesuaian Bidang" value={<StarRating value={row.kesesuaian_bidang} />} />
-            <Field label="Hard Skill" value={<StarRating value={row.nilai_hard_skill} />} />
-            <Field label="Soft Skill" value={<StarRating value={row.nilai_soft_skill} />} />
-            <Field label="Bahasa Asing" value={<StarRating value={row.nilai_bahasa_asing} />} />
-            <Field label="IT" value={<StarRating value={row.nilai_it} />} />
-            <Field label="Kepemimpinan" value={<StarRating value={row.nilai_kepemimpinan} />} />
-          </TabPanel>
-          <TabPanel className="space-y-4">
-            <Field label="Saran Kurikulum" value={row.saran_kurikulum} />
-            <Field label="Kesan Kuliah" value={row.kesan_kuliah} />
-          </TabPanel>
-          {row.answers ? (
-            <TabPanel className="space-y-8">
-              {questionnaireSections.map((section) => (
-                <section key={section.id}>
-                  <h3 className="font-heading text-lg font-semibold leading-7 text-slate-900">{section.title}</h3>
-                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                    {section.questions.map((question) => (
-                      <QuestionAnswer key={question.id} question={question} answers={answers} />
-                    ))}
-                  </div>
-                </section>
-              ))}
-            </TabPanel>
-          ) : null}
+          {tabs.map((tab) => (
+            <TabPanel key={tab.label}>{tab.content}</TabPanel>
+          ))}
         </TabPanels>
       </TabGroup>
     </Modal>

@@ -70,4 +70,21 @@ class ValidationUtilsTest {
         assertTrue(ValidationUtils.isValidProfilePhone("081234567890123"))
         assertFalse(ValidationUtils.isValidProfilePhone("0812345678901234"))
     }
+
+    @Test
+    fun registerValidationRejectsInvalidIpk() {
+        assertEquals(
+            "IPK tidak valid",
+            ValidationUtils.validateRegister(
+                nim = "2019.01.0023",
+                nama = "Alumni Test",
+                prodi = "Teknik Informatika",
+                tahunLulus = 2023,
+                ipk = 4.5,
+                email = "alumni@example.com",
+                password = "password123",
+                confirmPassword = "password123"
+            )
+        )
+    }
 }

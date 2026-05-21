@@ -75,8 +75,7 @@ export default function TracerStudyPage() {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card className="p-4"><p className="text-sm font-medium leading-5 text-slate-600">Kesesuaian Rata-rata</p><p className="mt-2 font-heading text-2xl font-semibold leading-8">{summary?.avg_kesesuaian ?? 0}/5</p></Card>
+      <div className="grid gap-4 md:grid-cols-1">
         <Card className="p-4"><p className="text-sm font-medium leading-5 text-slate-600">Rentang Gaji Terbanyak</p><p className="mt-2 font-heading text-lg font-semibold leading-7">{summary?.modal_gaji ?? "-"}</p></Card>
       </div>
 

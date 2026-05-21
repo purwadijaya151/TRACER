@@ -49,6 +49,7 @@ describe("POST /api/auth/register-alumni", () => {
           prodi: "Teknik Informatika",
           tahun_masuk: 2019,
           tahun_lulus: 2023,
+          ipk: 3.75,
           email: "alumni@example.com"
         })
       })
@@ -70,7 +71,8 @@ describe("POST /api/auth/register-alumni", () => {
           prodi: "Teknik Informatika",
           tahun_masuk: 2019,
           tahun_lulus: 2023,
-          email: "alumni@example.com"
+          email: "alumni@example.com",
+          ipk: 3.75
         })
       })
     );
@@ -89,10 +91,33 @@ describe("POST /api/auth/register-alumni", () => {
         id: "user-1",
         nim: "2019.01.0023",
         email: "alumni@example.com",
+        ipk: 3.75,
         is_admin: false
       }),
       { onConflict: "id" }
     );
+  });
+
+  it("returns validation error when ipk is outside the supported range", async () => {
+    const response = await POST(
+      new Request("https://example.test/api/auth/register-alumni", {
+        method: "POST",
+        body: JSON.stringify({
+          nim: "2019.01.0023",
+          password: "secret123",
+          nama_lengkap: "Alumni Test",
+          prodi: "Teknik Informatika",
+          tahun_masuk: 2019,
+          tahun_lulus: 2023,
+          email: "alumni@example.com",
+          ipk: 4.5
+        })
+      })
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ message: "IPK tidak valid" });
+    expect(mocks.createUser).not.toHaveBeenCalled();
   });
 
   it("returns 429 when registration attempts exceed the rate limit", async () => {
@@ -108,6 +133,7 @@ describe("POST /api/auth/register-alumni", () => {
           prodi: "Teknik Informatika",
           tahun_masuk: 2019,
           tahun_lulus: 2023,
+          ipk: 3.75,
           email: "alumni@example.com"
         })
       })
@@ -134,6 +160,7 @@ describe("POST /api/auth/register-alumni", () => {
           prodi: "Teknik Informatika",
           tahun_masuk: 2019,
           tahun_lulus: 2023,
+          ipk: 3.75,
           email: "alumni@example.com"
         })
       })

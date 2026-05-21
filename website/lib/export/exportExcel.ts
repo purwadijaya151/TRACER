@@ -1,4 +1,10 @@
 import * as XLSX from "xlsx-js-style";
+import {
+  getTracerCompanyDisplay,
+  getTracerMonthlyIncomeDisplay,
+  getTracerPositionDisplay,
+  getTracerWaitTimeDisplay
+} from "@/lib/tracer-study-display";
 import { getTracerRecord, responseStatus } from "@/lib/utils";
 import {
   answerValue,
@@ -61,11 +67,11 @@ export function mapTracerRowsForExcel(rows: TracerStudy[]) {
     "Tahun Lulus": row.alumni?.tahun_lulus ?? "-",
     IPK: row.alumni?.ipk ?? "-",
     "Status Kerja": row.status_kerja,
-    Perusahaan: row.nama_perusahaan ?? "-",
+    Perusahaan: getTracerCompanyDisplay(row) ?? "-",
     "Bidang Pekerjaan": row.bidang_pekerjaan ?? "-",
-    Jabatan: row.jabatan ?? "-",
-    "Rentang Gaji": row.rentang_gaji ?? "-",
-    "Waktu Tunggu": row.waktu_tunggu ?? "-",
+    Jabatan: getTracerPositionDisplay(row) ?? "-",
+    "Rentang Gaji": getTracerMonthlyIncomeDisplay(row) ?? "-",
+    "Waktu Tunggu": getTracerWaitTimeDisplay(row) ?? "-",
     "Kesesuaian Bidang": row.kesesuaian_bidang ?? "-",
     "Hard Skill": row.nilai_hard_skill ?? "-",
     "Soft Skill": row.nilai_soft_skill ?? "-",
@@ -173,11 +179,11 @@ export function buildWorkbook(input: TracerStudy[] | ReportData) {
         Nama: row.alumni?.nama_lengkap ?? "-",
         Prodi: row.alumni?.prodi ?? "-",
         "Status Kerja": row.status_kerja,
-        Perusahaan: row.nama_perusahaan ?? "-",
+        Perusahaan: getTracerCompanyDisplay(row) ?? "-",
         "Bidang Pekerjaan": row.bidang_pekerjaan ?? "-",
-        Jabatan: row.jabatan ?? "-",
-        "Rentang Gaji": row.rentang_gaji ?? "-",
-        "Waktu Tunggu": row.waktu_tunggu ?? "-"
+        Jabatan: getTracerPositionDisplay(row) ?? "-",
+        "Rentang Gaji": getTracerMonthlyIncomeDisplay(row) ?? "-",
+        "Waktu Tunggu": getTracerWaitTimeDisplay(row) ?? "-"
       }))
     : data.type === "kompetensi"
       ? rows.map((row, index) => ({

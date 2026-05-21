@@ -11,6 +11,7 @@ type RegisterAlumniRequest = {
   prodi?: string;
   tahun_masuk?: number;
   tahun_lulus?: number;
+  ipk?: number;
   email?: string;
 };
 
@@ -84,6 +85,7 @@ export async function POST(request: Request) {
       prodi: payload.prodi,
       tahun_masuk: payload.tahun_masuk,
       tahun_lulus: payload.tahun_lulus,
+      ipk: payload.ipk,
       email: payload.email,
       email_verified: true
     }
@@ -106,6 +108,7 @@ export async function POST(request: Request) {
         prodi: payload.prodi,
         tahun_masuk: payload.tahun_masuk,
         tahun_lulus: payload.tahun_lulus,
+        ipk: payload.ipk,
         email: payload.email,
         is_admin: false
       },
@@ -140,6 +143,9 @@ function validatePayload(payload: RegisterAlumniRequest) {
   }
   if ((payload.tahun_masuk ?? 0) > (payload.tahun_lulus ?? 0)) {
     return "Tahun masuk tidak boleh lebih besar dari tahun lulus";
+  }
+  if (typeof payload.ipk !== "number" || Number.isNaN(payload.ipk) || payload.ipk < 0 || payload.ipk > 4) {
+    return "IPK tidak valid";
   }
   if (!payload.email || !isValidEmail(payload.email)) return "Email tidak valid";
   if (!payload.password || payload.password.length < 6) return "Password minimal 6 karakter";

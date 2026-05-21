@@ -51,6 +51,7 @@ object ValidationUtils {
         nama: String,
         prodi: String,
         tahunLulus: Int,
+        ipk: Double?,
         email: String,
         password: String,
         confirmPassword: String
@@ -59,6 +60,7 @@ object ValidationUtils {
         nama.trim().length < 3 -> "Nama lengkap wajib diisi"
         prodi !in Constants.PRODI -> "Program studi tidak valid"
         !isValidYear(tahunLulus) -> "Tahun lulus tidak valid"
+        !isValidIpk(ipk) -> "IPK tidak valid"
         !isValidEmail(email) -> "Email tidak valid"
         !isValidPassword(password) -> "Password minimal 6 karakter"
         password != confirmPassword -> "Konfirmasi password tidak sama"

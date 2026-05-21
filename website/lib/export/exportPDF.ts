@@ -1,5 +1,11 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import {
+  getTracerCompanyDisplay,
+  getTracerMonthlyIncomeDisplay,
+  getTracerPositionDisplay,
+  getTracerWaitTimeDisplay
+} from "@/lib/tracer-study-display";
 import { formatDate, getTracerRecord, responseStatus } from "@/lib/utils";
 import type { Alumni, ReportData, TracerStudy } from "@/types";
 
@@ -13,9 +19,9 @@ export function mapTracerRowsForPdf(rows: TracerStudy[]) {
       alumni?.prodi ?? "-",
       alumni?.tahun_lulus ?? "-",
       row.status_kerja,
-      row.nama_perusahaan ?? "-",
-      row.jabatan ?? "-",
-      row.rentang_gaji ?? "-",
+      getTracerCompanyDisplay(row) ?? "-",
+      getTracerPositionDisplay(row) ?? "-",
+      getTracerMonthlyIncomeDisplay(row) ?? "-",
       formatDate(row.submitted_at)
     ];
   });
@@ -56,11 +62,11 @@ function getColumns(data: ReportData) {
         row.alumni?.nama_lengkap ?? "-",
         row.alumni?.prodi ?? "-",
         row.status_kerja,
-        row.nama_perusahaan ?? "-",
+        getTracerCompanyDisplay(row) ?? "-",
         row.bidang_pekerjaan ?? "-",
-        row.jabatan ?? "-",
-        row.rentang_gaji ?? "-",
-        row.waktu_tunggu ?? "-"
+        getTracerPositionDisplay(row) ?? "-",
+        getTracerMonthlyIncomeDisplay(row) ?? "-",
+        getTracerWaitTimeDisplay(row) ?? "-"
       ])
     };
   }

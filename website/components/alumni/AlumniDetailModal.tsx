@@ -9,6 +9,14 @@ import { QuestionnaireAnswersPanel } from "@/components/tracer-study/Questionnai
 import { getActiveQuestionnaireQuestions } from "@/lib/actions/pertanyaan.actions";
 import { getLatestTracerStudyDetailByAlumni } from "@/lib/actions/tracer-study.actions";
 import { buildQuestionnaireSections } from "@/lib/questionnaire-render";
+import {
+  getTracerCityDisplay,
+  getTracerCompanyDisplay,
+  getTracerMonthlyIncomeDisplay,
+  getTracerProvinceDisplay,
+  getTracerWaitTimeDisplay,
+  getTracerWorkplaceLevelDisplay
+} from "@/lib/tracer-study-display";
 import { cn, formatDate, getTracerRecord } from "@/lib/utils";
 import type { Alumni, QuestionnaireQuestion, TracerStudy } from "@/types";
 
@@ -107,6 +115,12 @@ export function AlumniDetailModal({
   const birthPlaceAndDate = [alumni.tempat_lahir, formatDate(alumni.tanggal_lahir)]
     .filter(Boolean)
     .join(" / ");
+  const tracerMonthlyIncome = tracerDetail ? getTracerMonthlyIncomeDisplay(tracerDetail) : null;
+  const tracerWaitTime = tracerDetail ? getTracerWaitTimeDisplay(tracerDetail) : null;
+  const tracerCompany = tracerDetail ? getTracerCompanyDisplay(tracerDetail) : null;
+  const tracerProvince = tracerDetail ? getTracerProvinceDisplay(tracerDetail) : null;
+  const tracerCity = tracerDetail ? getTracerCityDisplay(tracerDetail) : null;
+  const tracerWorkplaceLevel = tracerDetail ? getTracerWorkplaceLevelDisplay(tracerDetail) : null;
 
   return (
     <Modal open={open} onClose={onClose} title="Detail Alumni" size="lg">
@@ -127,28 +141,54 @@ export function AlumniDetailModal({
           ))}
         </TabList>
         <TabPanels>
-          <TabPanel className="grid gap-4 sm:grid-cols-2">
-            <DetailRow label="NPM" value={alumni.nim} />
-            <DetailRow label="Nama" value={alumni.nama_lengkap} />
-            <DetailRow label="Prodi" value={<Badge variant="info">{alumni.prodi}</Badge>} />
-            <DetailRow label="Tahun Masuk" value={alumni.tahun_masuk} />
-            <DetailRow label="Tahun Lulus" value={alumni.tahun_lulus} />
-            <DetailRow label="IPK" value={alumni.ipk ?? "-"} />
-            <DetailRow label="Email" value={alumni.email} />
-            <DetailRow label="No HP" value={alumni.no_hp} />
-            <DetailRow label="Tempat/Tanggal Lahir" value={birthPlaceAndDate || "-"} />
-            <DetailRow
-              label="Status Tracer"
-              value={
-                <Badge variant={tracer?.is_submitted ? "success" : "warning"}>
-                  {tracer?.is_submitted ? "Sudah Mengisi" : "Belum Mengisi"}
-                </Badge>
-              }
-            />
-            <DetailRow label="Versi Kuesioner" value={tracerDetail?.questionnaire_version ?? "-"} />
-            <DetailRow label="Tanggal Isi Terakhir" value={formatDate(tracerDetail?.submitted_at)} />
-            <div className="sm:col-span-2">
-              <DetailRow label="Alamat" value={alumni.alamat} />
+          <TabPanel className="space-y-6">
+            <section>
+              <h3 className="text-base font-semibold leading-6 text-slate-900">Data Profil Alumni</h3>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                Data ini berasal dari master alumni, bukan dari pertanyaan tracer study.
+              </p>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <DetailRow label="NPM" value={alumni.nim} />
+                <DetailRow label="Nama" value={alumni.nama_lengkap} />
+                <DetailRow label="Prodi" value={<Badge variant="info">{alumni.prodi}</Badge>} />
+                <DetailRow label="Tahun Masuk" value={alumni.tahun_masuk} />
+                <DetailRow label="Tahun Lulus" value={alumni.tahun_lulus} />
+                <DetailRow label="IPK" value={alumni.ipk ?? "-"} />
+                <DetailRow label="Email" value={alumni.email} />
+                <DetailRow label="No HP" value={alumni.no_hp} />
+                <DetailRow label="Tempat/Tanggal Lahir" value={birthPlaceAndDate || "-"} />
+                <div className="sm:col-span-2">
+                  <DetailRow label="Alamat" value={alumni.alamat} />
+                </div>
+              </div>
+            </section>
+            <section>
+              <h3 className="text-base font-semibold leading-6 text-slate-900">Ringkasan Tracer Terkini</h3>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                Ringkasan ini ditarik dari jawaban tracer terbaru. Tab Jawaban Kuesioner menampilkan seluruh pertanyaan aktif.
+              </p>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <DetailRow
+                  label="Status Tracer"
+                  value={
+                    <Badge variant={tracer?.is_submitted ? "success" : "warning"}>
+                      {tracer?.is_submitted ? "Sudah Mengisi" : "Belum Mengisi"}
+                    </Badge>
+                  }
+                />
+                <DetailRow label="Versi Kuesioner" value={tracerDetail?.questionnaire_version ?? "-"} />
+                <DetailRow label="Tanggal Isi Terakhir" value={formatDate(tracerDetail?.submitted_at)} />
+                <DetailRow label="Pendapatan per Bulan" value={tracerMonthlyIncome ?? "-"} />
+                <DetailRow label="Waktu Tunggu Kerja" value={tracerWaitTime ?? "-"} />
+                <DetailRow label="Perusahaan / Usaha" value={tracerCompany ?? "-"} />
+                <DetailRow label="Provinsi Kerja" value={tracerProvince ?? "-"} />
+                <DetailRow label="Kota/Kabupaten Kerja" value={tracerCity ?? "-"} />
+                <DetailRow label="Tingkat Tempat Kerja" value={tracerWorkplaceLevel ?? "-"} />
+              </div>
+            </section>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+              Tidak semua detail di profil alumni punya pasangan pertanyaan di kuesioner. Field seperti NPM, nama, prodi, tahun, IPK,
+              email, nomor HP, tempat/tanggal lahir, dan alamat tetap bersumber dari data master alumni.
             </div>
           </TabPanel>
           {showQuestionnaireTab ? (

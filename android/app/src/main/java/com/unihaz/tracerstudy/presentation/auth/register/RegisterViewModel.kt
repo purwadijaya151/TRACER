@@ -25,11 +25,12 @@ class RegisterViewModel(private val registerUseCase: RegisterUseCase) : ViewMode
         nama: String,
         prodi: String,
         tahunLulus: Int,
+        ipk: Double?,
         email: String,
         password: String,
         confirmPassword: String
     ) {
-        ValidationUtils.validateRegister(nim, nama, prodi, tahunLulus, email, password, confirmPassword)?.let {
+        ValidationUtils.validateRegister(nim, nama, prodi, tahunLulus, ipk, email, password, confirmPassword)?.let {
             _state.value = RegisterUiState(error = it)
             return
         }
@@ -41,6 +42,7 @@ class RegisterViewModel(private val registerUseCase: RegisterUseCase) : ViewMode
                 prodi = prodi,
                 tahunMasuk = tahunLulus - 4,
                 tahunLulus = tahunLulus,
+                ipk = ipk!!,
                 email = email
             )
             when (val result = registerUseCase(nim, password, payload)) {
