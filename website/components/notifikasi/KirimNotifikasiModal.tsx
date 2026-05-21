@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Textarea } from "@/components/ui/Textarea";
-import { broadcastNotifikasi, getRecipientCount } from "@/lib/actions/notifikasi.actions";
+import { getPengaturan } from "@/lib/actions/pengaturan.actions";
 import { PRODI_OPTIONS } from "@/lib/constants";
 import { notificationSchema } from "@/lib/validation";
 import { cn } from "@/lib/utils";
@@ -70,12 +70,38 @@ export function KirimNotifikasiModal({
     if (!open) return;
     const timer = window.setTimeout(async () => {
       setLoadingCount(true);
-      const result = await getRecipientCount(recipientFilters);
-      setLoadingCount(false);
-      if (!result.error) setRecipientCount(result.data ?? 0);
+      try {
+        const response = await fetch("/api/admin/notifications/recipients", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(recipientFilters)
+        });
+        const result = (await response.json()) as { count?: number };
+        if (response.ok) {
+          setRecipientCount(result.count ?? 0);
+        }
+      } catch {
+        setRecipientCount(0);
+      } finally {
+        setLoadingCount(false);
+      }
     }, 350);
     return () => window.clearTimeout(timer);
   }, [open, recipientFilters]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (form.getValues("body")?.trim()) return;
+
+    const loadDefaultReminder = async () => {
+      const result = await getPengaturan();
+      if (result.data?.pesan_pengingat && !form.getValues("body")?.trim()) {
+        form.setValue("body", result.data.pesan_pengingat, { shouldDirty: false });
+      }
+    };
+
+    void loadDefaultReminder();
+  }, [form, open]);
 
   const submit = async (values: FormValues) => {
     if (!confirming) {
@@ -83,13 +109,24 @@ export function KirimNotifikasiModal({
       return;
     }
     setSending(true);
-    const result = await broadcastNotifikasi(values);
-    setSending(false);
-    if (result.error) {
-      toast.error(result.error);
+    try {
+      const response = await fetch("/api/admin/notifications/broadcast", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(values)
+      });
+      const result = (await response.json()) as { sent?: number; message?: string };
+      if (!response.ok) {
+        toast.error(result.message ?? "Gagal mengirim notifikasi");
+        return;
+      }
+      toast.success(`${result.sent ?? 0} notifikasi dikirim`);
+    } catch {
+      toast.error("Gagal mengirim notifikasi");
       return;
+    } finally {
+      setSending(false);
     }
-    toast.success(`${result.data?.sent ?? 0} notifikasi dikirim`);
     setConfirming(false);
     form.reset({ title: "", body: "", target: "all", prodi: [] });
     onSent();

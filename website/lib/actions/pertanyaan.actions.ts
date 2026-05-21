@@ -9,6 +9,7 @@ import {
   requireAdmin
 } from "@/lib/actions/_utils";
 import { buildIlikeOrFilter } from "@/lib/postgrest";
+import { QUESTIONNAIRE_DEFAULT_VERSION } from "@/lib/constants";
 import { normalizeQuestionPayload, validateQuestionPayload, type QuestionFormValues } from "@/lib/questionnaire";
 import { questionnaireQuestionSchema } from "@/lib/validation";
 import type { PaginatedResult, QuestionnaireFilters, QuestionnaireQuestion } from "@/types";
@@ -52,6 +53,30 @@ export async function getQuestionnaireQuestions(filters: QuestionnaireFilters = 
     page,
     pageSize
   });
+}
+
+export async function getActiveQuestionnaireQuestions(version = QUESTIONNAIRE_DEFAULT_VERSION) {
+  const auth = await requireAdmin();
+  if (!auth.ok) return actionError<QuestionnaireQuestion[]>(auth.error);
+
+  const { data, error } = await auth.adminClient
+    .from("questionnaire_questions")
+    .select("*")
+    .eq("questionnaire_version", version)
+    .eq("is_active", true)
+    .order("section_order", { ascending: true })
+    .order("order_index", { ascending: true })
+    .order("code", { ascending: true });
+
+  if (error) {
+    if (isMissingRelationError(error)) {
+      return actionData<QuestionnaireQuestion[]>([]);
+    }
+    reportActionError("pertanyaan.getActiveQuestionnaireQuestions", error, { version });
+    return actionError<QuestionnaireQuestion[]>("Gagal memuat pertanyaan aktif");
+  }
+
+  return actionData((data ?? []) as QuestionnaireQuestion[]);
 }
 
 export async function createQuestionnaireQuestion(input: unknown) {

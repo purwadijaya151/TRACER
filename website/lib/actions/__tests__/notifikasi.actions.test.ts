@@ -35,6 +35,35 @@ function countBuilder(count: number) {
   return query;
 }
 
+function pageBuilder<T>(rows: T[]) {
+  const query = {
+    select: vi.fn(() => query),
+    eq: vi.fn(() => query),
+    in: vi.fn(() => query),
+    gte: vi.fn(() => query),
+    lte: vi.fn(() => query),
+    order: vi.fn(() => query),
+    range: vi.fn((from: number, to: number) => {
+      const slice = rows.slice(from, to + 1);
+      return Promise.resolve({ data: slice, error: null });
+    })
+  };
+  return query;
+}
+
+function insertBuilder() {
+  const query = {
+    order: vi.fn(() => query),
+    range: vi.fn(async () => ({ data: [], error: null })),
+    insert: vi.fn(() => query),
+    select: vi.fn(() => query),
+    single: vi.fn(async () => ({ data: { id: "broadcast-1" }, error: null })),
+    delete: vi.fn(() => query),
+    eq: vi.fn(async () => ({ error: null }))
+  };
+  return query;
+}
+
 describe("notifikasi actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -116,5 +145,40 @@ describe("notifikasi actions", () => {
 
     expect(result.error).toBe("Rentang tahun lulus wajib diisi");
     expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+
+  it("falls back to base tables when the broadcast RPC is missing", async () => {
+    const alumniRows = pageBuilder([{ id: "alumni-1" }, { id: "alumni-2" }]);
+    const tracerRows = pageBuilder([{ alumni_id: "alumni-2" }]);
+    const broadcastRows = insertBuilder();
+    const notificationRows = {
+      insert: vi.fn(async () => ({ error: null })),
+      delete: vi.fn(() => notificationRows),
+      eq: vi.fn(async () => ({ error: null }))
+    };
+
+    mocks.rpc.mockResolvedValueOnce({ data: null, error: { code: "PGRST202" } });
+    mocks.from.mockImplementation((table: string) => {
+      if (table === "alumni") return alumniRows;
+      if (table === "tracer_study") return tracerRows;
+      if (table === "notification_broadcasts") return broadcastRows;
+      if (table === "notifications") return notificationRows;
+      throw new Error(`unexpected table ${table}`);
+    });
+
+    const result = await broadcastNotifikasi({
+      title: "Pengingat",
+      body: "Mohon isi tracer study",
+      target: "belum_mengisi"
+    });
+
+    expect(result.data).toEqual({ sent: 1 });
+    expect(notificationRows.insert).toHaveBeenCalledWith([
+      expect.objectContaining({
+        alumni_id: "alumni-1",
+        title: "Pengingat",
+        broadcast_id: "broadcast-1"
+      })
+    ]);
   });
 });

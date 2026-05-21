@@ -9,20 +9,16 @@ import {
   reportActionError,
   requireAdmin
 } from "@/lib/actions/_utils";
+import {
+  AdminNotificationServiceError,
+  broadcastNotifications,
+  countNotificationRecipients,
+  type NotificationBroadcastPayload,
+  type NotificationTargetPayload
+} from "@/lib/notifications/admin-notification-service";
 import { buildIlikeOrFilter } from "@/lib/postgrest";
 import { notificationSchema, notificationTargetSchema } from "@/lib/validation";
 import type { NotificationBroadcast, NotificationFilters, PaginatedResult } from "@/types";
-
-type AdminContext = Extract<Awaited<ReturnType<typeof requireAdmin>>, { ok: true }>;
-
-type BroadcastPayload = {
-  title: string;
-  body: string;
-  target: "all" | "prodi" | "tahun" | "belum_mengisi";
-  prodi?: string[];
-  tahunMulai?: number;
-  tahunAkhir?: number;
-};
 
 export async function getRecipientCount(input: unknown) {
   const auth = await requireAdmin();
@@ -31,20 +27,17 @@ export async function getRecipientCount(input: unknown) {
   const parsed = notificationTargetSchema.safeParse(input);
   if (!parsed.success) return actionError<number>(parsed.error.issues[0]?.message ?? "Target notifikasi tidak valid");
 
-  const payload = parsed.data as BroadcastPayload;
-  const { data, error } = await auth.adminClient.rpc("admin_count_notification_recipients", {
-    p_target_type: payload.target,
-    p_prodi: payload.prodi ?? null,
-    p_tahun_mulai: payload.tahunMulai ?? null,
-    p_tahun_akhir: payload.tahunAkhir ?? null
-  });
+  const payload = parsed.data as NotificationTargetPayload;
 
-  if (error) {
-    if (isMissingFunctionError(error)) return countRecipientsFromBaseTables(auth, payload);
+  try {
+    return actionData(await countNotificationRecipients(auth.adminClient, payload));
+  } catch (error) {
+    if (error instanceof AdminNotificationServiceError && error.code === "empty_prodi_target") {
+      return actionError<number>("Pilih minimal satu prodi");
+    }
     reportActionError("notifikasi.getRecipientCount", error, { target: payload.target });
     return actionError<number>("Gagal menghitung penerima");
   }
-  return actionData(Number(data ?? 0));
 }
 
 export async function getNotifications(filters: NotificationFilters = {}, page = 1, pageSize = 10) {
@@ -117,37 +110,28 @@ export async function broadcastNotifikasi(input: unknown) {
   const parsed = notificationSchema.safeParse(input);
   if (!parsed.success) return actionError<{ sent: number }>(parsed.error.issues[0]?.message ?? "Data notifikasi tidak valid");
 
-  const payload = parsed.data as BroadcastPayload;
+  const payload = parsed.data as NotificationBroadcastPayload;
 
-  const { data, error } = await auth.adminClient.rpc("admin_broadcast_notifications", {
-    p_title: payload.title,
-    p_body: payload.body,
-    p_target_type: payload.target,
-    p_prodi: payload.prodi ?? null,
-    p_tahun_mulai: payload.tahunMulai ?? null,
-    p_tahun_akhir: payload.tahunAkhir ?? null,
-    p_created_by: auth.user.id
-  });
-
-  if (error) {
-    if (error.message.includes("rate_limit")) {
-      return actionError<{ sent: number }>("Broadcast dibatasi maksimal 1 kali per menit");
-    }
-    if (error.message.includes("no_recipients")) {
-      return actionError<{ sent: number }>("Tidak ada alumni yang cocok dengan target");
-    }
-    if (error.message.includes("empty_prodi_target")) {
-      return actionError<{ sent: number }>("Pilih minimal satu prodi");
-    }
-    if (isMissingFunctionError(error)) {
-      return actionError<{ sent: number }>("Fitur broadcast belum tersedia. Jalankan migrasi database notifikasi terlebih dahulu.");
+  try {
+    return actionData(await broadcastNotifications(auth.adminClient, payload, { createdBy: auth.user.id }));
+  } catch (error) {
+    if (error instanceof AdminNotificationServiceError) {
+      if (error.code === "rate_limit") {
+        return actionError<{ sent: number }>("Broadcast dibatasi maksimal 1 kali per menit");
+      }
+      if (error.code === "no_recipients") {
+        return actionError<{ sent: number }>("Tidak ada alumni yang cocok dengan target");
+      }
+      if (error.code === "empty_prodi_target") {
+        return actionError<{ sent: number }>("Pilih minimal satu prodi");
+      }
+      if (error.code === "feature_unavailable") {
+        return actionError<{ sent: number }>("Fitur broadcast belum tersedia. Jalankan migrasi database notifikasi terlebih dahulu.");
+      }
     }
     reportActionError("notifikasi.broadcastNotifikasi", error, { target: payload.target });
     return actionError<{ sent: number }>("Gagal mengirim notifikasi");
   }
-
-  const row = Array.isArray(data) ? data[0] : data;
-  return actionData({ sent: Number(row?.sent ?? 0) });
 }
 
 export async function deleteNotifikasi(id: string) {
@@ -164,45 +148,4 @@ export async function deleteNotifikasi(id: string) {
   }
 
   return actionData({ deleted: Number(data ?? 0) });
-}
-
-async function countRecipientsFromBaseTables(auth: AdminContext, payload: BroadcastPayload) {
-  let query = auth.adminClient
-    .from("alumni")
-    .select("id", { count: "exact", head: true })
-    .eq("is_admin", false);
-
-  if (payload.target === "prodi") {
-    if (!payload.prodi?.length) return actionError<number>("Pilih minimal satu prodi");
-    query = query.in("prodi", payload.prodi);
-  }
-
-  if (payload.target === "tahun") {
-    if (payload.tahunMulai) query = query.gte("tahun_lulus", payload.tahunMulai);
-    if (payload.tahunAkhir) query = query.lte("tahun_lulus", payload.tahunAkhir);
-  }
-
-  if (payload.target === "belum_mengisi") {
-    const [totalResult, submittedResult] = await Promise.all([
-      query,
-      auth.adminClient
-        .from("tracer_study")
-        .select("alumni_id, alumni!inner(is_admin)", { count: "exact", head: true })
-        .eq("is_submitted", true)
-        .eq("alumni.is_admin", false)
-    ]);
-
-    if (totalResult.error || submittedResult.error) {
-      reportActionError("notifikasi.countRecipientsFromBaseTables.belum_mengisi", totalResult.error ?? submittedResult.error);
-      return actionError<number>("Gagal menghitung penerima");
-    }
-    return actionData(Math.max((totalResult.count ?? 0) - (submittedResult.count ?? 0), 0));
-  }
-
-  const { count, error } = await query;
-  if (error) {
-    reportActionError("notifikasi.countRecipientsFromBaseTables", error, { target: payload.target });
-    return actionError<number>("Gagal menghitung penerima");
-  }
-  return actionData(count ?? 0);
 }

@@ -114,6 +114,30 @@ export async function getTracerStudyDetail(id: string) {
   return actionData(normalizeTracerStudyRow(data as TracerStudyRowWithJoinedAlumni));
 }
 
+export async function getLatestTracerStudyDetailByAlumni(alumniId: string) {
+  const auth = await requireAdmin();
+  if (!auth.ok) return actionError<TracerStudy | null>(auth.error);
+
+  const { data, error } = await auth.adminClient
+    .from("tracer_study")
+    .select("*, alumni!inner(nim,nama_lengkap,prodi,tahun_lulus,ipk,email,no_hp,is_admin)")
+    .eq("alumni_id", alumniId)
+    .eq("is_submitted", true)
+    .eq("alumni.is_admin", false)
+    .order("submitted_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    reportActionError("tracerStudy.getLatestTracerStudyDetailByAlumni", error, { alumniId });
+    return actionError<TracerStudy | null>("Gagal memuat jawaban tracer alumni");
+  }
+
+  if (!data) return actionData<TracerStudy | null>(null);
+  return actionData(normalizeTracerStudyRow(data as TracerStudyRowWithJoinedAlumni));
+}
+
 async function getAllTracerSummaryRows(auth: AdminContext, filters: TracerStudyFilters) {
   const pageSize = 1000;
   const rows: TracerSummaryRow[] = [];

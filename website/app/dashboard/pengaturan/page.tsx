@@ -191,7 +191,7 @@ export default function PengaturanPage() {
             <Textarea label="Pesan Pengingat" error={settingsForm.formState.errors.pesan_pengingat?.message} {...settingsForm.register("pesan_pengingat")} />
             <Toggle
               label="Auto Reminder"
-              description="Aktifkan penjadwalan pengingat otomatis jika backend cron tersedia."
+              description="Aktifkan penjadwalan pengingat otomatis harian melalui endpoint cron admin."
               checked={settingsForm.watch("auto_reminder")}
               onChange={(checked) => settingsForm.setValue("auto_reminder", checked)}
             />
