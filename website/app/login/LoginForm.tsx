@@ -9,7 +9,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { loginAdmin } from "@/lib/actions/auth.actions";
-import { INDONESIAN_ERRORS, NPP_EXAMPLE, NPP_MAX_DIGIT_LENGTH } from "@/lib/constants";
+import { INDONESIAN_ERRORS, NPP_MAX_DIGIT_LENGTH } from "@/lib/constants";
 import { loginSchema } from "@/lib/validation";
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -72,7 +72,6 @@ export function LoginForm() {
           autoComplete="username"
           inputMode="numeric"
           maxLength={NPP_MAX_DIGIT_LENGTH}
-          placeholder={NPP_EXAMPLE}
           error={form.formState.errors.npp?.message}
           {...form.register("npp", {
             setValueAs: (value) => String(value ?? "").replace(/\D/g, "").slice(0, NPP_MAX_DIGIT_LENGTH)
