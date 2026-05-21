@@ -117,7 +117,7 @@ begin
   ) and not exists (
     select 1
     from public.alumni
-    where npp is not null and npp !~ '^[0-9]{18}$'
+    where npp is not null and npp !~ '^[0-9]{8,18}$'
   ) then
     alter table public.alumni alter column npp type varchar(18);
   end if;
@@ -126,11 +126,11 @@ end $$;
 alter table public.alumni drop constraint if exists alumni_npp_format_check;
 alter table public.alumni
   add constraint alumni_npp_format_check
-  check (npp is null or npp ~ '^[0-9]{18}$')
+  check (npp is null or npp ~ '^[0-9]{8,18}$')
   not valid;
 
 comment on column public.alumni.nim is 'NPM mahasiswa/alumni. Untuk row admin legacy, isi kode staff internal, bukan NPP.';
-comment on column public.alumni.npp is 'NPP staff/admin kampus, format asli 18 digit angka. Mahasiswa/alumni tidak memakai kolom ini.';
+comment on column public.alumni.npp is 'NPP staff/admin kampus, 8 sampai 18 digit angka. Mahasiswa/alumni tidak memakai kolom ini.';
 
 create table if not exists public.tracer_study (
   id uuid primary key default uuid_generate_v4(),

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
-  NPP_DIGIT_LENGTH,
+  NPP_MAX_DIGIT_LENGTH,
+  NPP_MIN_DIGIT_LENGTH,
   NPP_REGEX,
   QUESTIONNAIRE_DEFAULT_VERSION,
   QUESTION_TYPE_OPTIONS,
@@ -15,7 +16,7 @@ export const loginSchema = z.object({
   npp: z
     .string()
     .trim()
-    .regex(NPP_REGEX, `NPP harus ${NPP_DIGIT_LENGTH} digit angka`),
+    .regex(NPP_REGEX, `NPP harus ${NPP_MIN_DIGIT_LENGTH}-${NPP_MAX_DIGIT_LENGTH} digit angka`),
   password: z.string().min(6, "Password minimal 6 karakter")
 });
 

@@ -2,7 +2,16 @@ import { describe, expect, it } from "vitest";
 import { alumniSchema, loginSchema } from "@/lib/validation";
 
 describe("loginSchema", () => {
-  it("accepts the original 18 digit NPP format", () => {
+  it("accepts the active 8 digit NPP format", () => {
+    const result = loginSchema.safeParse({
+      npp: "22130014",
+      password: "secret123"
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts the legacy 18 digit NPP format", () => {
     const result = loginSchema.safeParse({
       npp: "198001012024011001",
       password: "secret123"
@@ -11,7 +20,7 @@ describe("loginSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it.each(["19800101202401100", "1980010120240110011", "19800101202401100A"])(
+  it.each(["2213001", "1980010120240110011", "2213001A"])(
     "rejects invalid NPP value %s",
     (npp) => {
       const result = loginSchema.safeParse({

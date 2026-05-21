@@ -56,7 +56,7 @@ describe("loginAdmin", () => {
 
   it("signs in with the canonical Supabase Auth email for the admin NPP", async () => {
     mocks.maybeSingle.mockResolvedValueOnce({
-      data: { id: "admin-1", email: "stale-profile@test.local", is_admin: true, npp: "198001012024011001" },
+      data: { id: "admin-1", email: "stale-profile@test.local", is_admin: true, npp: "22130014" },
       error: null
     });
     mocks.getUserById.mockResolvedValueOnce({
@@ -68,7 +68,7 @@ describe("loginAdmin", () => {
       error: null
     });
 
-    const result = await loginAdmin({ npp: "198001012024011001", password: "secret123" });
+    const result = await loginAdmin({ npp: "22130014", password: "secret123" });
 
     expect(result.error).toBeNull();
     expect(mocks.signInWithPassword).toHaveBeenCalledWith({
@@ -81,7 +81,7 @@ describe("loginAdmin", () => {
   it("stops login when the rate limit is exceeded", async () => {
     mocks.consumeServerRateLimit.mockResolvedValueOnce({ limited: true, retryAfterSeconds: 120 });
 
-    const result = await loginAdmin({ npp: "198001012024011001", password: "secret123" });
+    const result = await loginAdmin({ npp: "22130014", password: "secret123" });
 
     expect(result.error).toBe("Terlalu banyak percobaan login. Coba lagi beberapa menit lagi.");
     expect(mocks.signInWithPassword).not.toHaveBeenCalled();

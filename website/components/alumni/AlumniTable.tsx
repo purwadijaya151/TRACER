@@ -78,11 +78,6 @@ export function AlumniTable({
     }),
     columnHelper.accessor("tahun_lulus", { header: "Lulus" }),
     columnHelper.display({
-      id: "ipk",
-      header: "IPK",
-      cell: ({ row }) => row.original.ipk?.toFixed(2) ?? "-"
-    }),
-    columnHelper.display({
       id: "status",
       header: "Status",
       cell: ({ row }) => {
@@ -116,7 +111,7 @@ export function AlumniTable({
   const table = useReactTable({ data: rows, columns, getCoreRowModel: getCoreRowModel() });
 
   return (
-    <Table className="min-w-[1040px]">
+    <Table className="min-w-[960px]">
       <thead>
         {table.getHeaderGroups().map((headerGroup) => (
           <tr key={headerGroup.id}>
@@ -129,9 +124,9 @@ export function AlumniTable({
         ))}
       </thead>
       <tbody>
-        {loading ? <TableSkeleton rows={5} columns={10} /> : null}
+        {loading ? <TableSkeleton rows={5} columns={9} /> : null}
         {!loading && rows.length === 0 ? (
-          <EmptyTableRow colSpan={10} title="Belum ada data alumni" description="Gunakan tombol tambah untuk membuat data alumni baru." />
+          <EmptyTableRow colSpan={9} title="Belum ada data alumni" description="Gunakan tombol tambah untuk membuat data alumni baru." />
         ) : null}
         {!loading &&
           table.getRowModel().rows.map((row, index) => (
@@ -159,7 +154,6 @@ function alumniColumnClass(columnId: string) {
     nama_lengkap: "min-w-[160px]",
     prodi: "w-44",
     tahun_lulus: "w-20 whitespace-nowrap",
-    ipk: "w-20 whitespace-nowrap",
     status: "w-36",
     actions: "w-28 whitespace-nowrap"
   };

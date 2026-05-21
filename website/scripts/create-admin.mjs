@@ -12,8 +12,9 @@ const env = loadEnvFiles(appDir);
 
 const supabaseUrl = requiredEnv("NEXT_PUBLIC_SUPABASE_URL", env);
 const serviceRoleKey = requiredEnv("SUPABASE_SERVICE_ROLE_KEY", env);
-const NPP_DIGIT_LENGTH = 18;
-const NPP_PATTERN = new RegExp(`^\\d{${NPP_DIGIT_LENGTH}}$`);
+const NPP_MIN_DIGIT_LENGTH = 8;
+const NPP_MAX_DIGIT_LENGTH = 18;
+const NPP_PATTERN = new RegExp(`^\\d{${NPP_MIN_DIGIT_LENGTH},${NPP_MAX_DIGIT_LENGTH}}$`);
 
 const admin = {
   npp: requiredEnv("ADMIN_NPP", env),
@@ -27,7 +28,7 @@ const admin = {
 };
 
 if (!NPP_PATTERN.test(admin.npp)) {
-  throw new Error(`ADMIN_NPP harus ${NPP_DIGIT_LENGTH} digit angka`);
+  throw new Error(`ADMIN_NPP harus ${NPP_MIN_DIGIT_LENGTH}-${NPP_MAX_DIGIT_LENGTH} digit angka`);
 }
 
 if (admin.password.length < 8) {

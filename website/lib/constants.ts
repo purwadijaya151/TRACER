@@ -26,9 +26,10 @@ export const WAKTU_TUNGGU_OPTIONS: WaktuTunggu[] = [
   "Lebih dari 6 bulan"
 ];
 
-export const NPP_DIGIT_LENGTH = 18;
-export const NPP_EXAMPLE = "198001012024011001";
-export const NPP_REGEX = /^\d{18}$/;
+export const NPP_MIN_DIGIT_LENGTH = 8;
+export const NPP_MAX_DIGIT_LENGTH = 18;
+export const NPP_EXAMPLE = "22130014";
+export const NPP_REGEX = /^\d{8,18}$/;
 export const INSTITUTION_EMAIL_DOMAIN = "ft.unihaz.ac.id";
 export const NPM_REGEX = /^[0-9.]{5,20}$/;
 export const QUESTIONNAIRE_DEFAULT_VERSION = "launch-v1";

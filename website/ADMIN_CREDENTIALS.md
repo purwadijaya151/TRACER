@@ -2,7 +2,7 @@
 
 Login admin web sekarang menggunakan NPP dan password.
 
-NPP khusus akun admin/staff kampus memakai format asli 18 digit angka. Mahasiswa/alumni memakai NPM pada aplikasi Android dan data alumni.
+NPP admin saat ini menerima 8 sampai 18 digit angka. Mahasiswa/alumni tetap memakai NPM pada aplikasi Android dan data alumni.
 
 Konfigurasi seed lokal:
 
